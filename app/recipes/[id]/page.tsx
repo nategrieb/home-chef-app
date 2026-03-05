@@ -90,22 +90,36 @@ export default function RecipeDetail() {
             Back to Menu
           </Link>
 
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 mb-6">
-            <h1 className="text-3xl font-light text-slate-900 mb-4">{recipe.title}</h1>
+          <div className="flex justify-between items-start mb-6">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 flex-1 mr-4">
+              <h1 className="text-3xl font-light text-slate-900 mb-4">{recipe.title}</h1>
 
-            {recipe.description && (
-              <p className="text-slate-600 mb-6 leading-relaxed">{recipe.description}</p>
-            )}
+              {recipe.description && (
+                <p className="text-slate-600 mb-6 leading-relaxed">{recipe.description}</p>
+              )}
 
-            <div className="flex items-center gap-6 text-sm text-slate-500">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span className="font-medium">
-                  Serves {recipe.servings || 4} {recipe.serving_unit || 'servings'}
-                </span>
+              <div className="flex items-center gap-6 text-sm text-slate-500">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span className="font-medium">
+                    Serves {recipe.servings || 4} {recipe.serving_unit || 'servings'}
+                  </span>
+                </div>
               </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Link
+                href={`/add-recipe?edit=${recipe.id}`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Recipe
+              </Link>
             </div>
           </div>
         </div>
