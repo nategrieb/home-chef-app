@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import RecipeCard from '@/components/RecipeCard';
+import { supabase } from '../lib/supabase';
+import RecipeCard from '../components/RecipeCard';
 import Link from 'next/link';
 
 export default function Home() {
