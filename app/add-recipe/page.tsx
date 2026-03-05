@@ -38,63 +38,127 @@ const { error: ingError } = await supabase.from('ingredients').insert(ingsWithId
   };
 
   return (
-    <main className="p-10 max-w-xl mx-auto font-serif">
-      <Link href="/" className="text-xs uppercase tracking-widest text-gray-400 hover:text-black transition">← Back to Menu</Link>
-      <h1 className="text-4xl italic border-b mb-8 pb-2 mt-4">Add New Recipe</h1>
-      
-      <div className="space-y-6">
-        <input 
-          placeholder="RECIPE NAME" 
-          className="w-full text-2xl outline-none border-b border-transparent focus:border-gray-300 transition"
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        
-        <textarea 
-          placeholder="Short description..." 
-          className="w-full h-20 outline-none resize-none italic text-gray-600"
-          onChange={(e) => setDescription(e.target.value)}
-        />
-
-        <div className="pt-4">
-          <h3 className="text-xs tracking-widest uppercase font-bold text-gray-400 mb-4">Ingredients & Nutrition</h3>
-          {ingredients.map((ing, i) => (
-            <div key={i} className="flex gap-4 mb-2">
-              <input 
-                placeholder="Item" 
-                className="flex-1 border-b p-1" 
-                onChange={(e) => {
-                  const items = [...ingredients];
-                  items[i].item_name = e.target.value;
-                  setIngredients(items);
-                }} 
-              />
-              <input 
-                placeholder="Cals" 
-                type="number"
-                className="w-20 border-b text-right p-1" 
-                onChange={(e) => {
-                  const items = [...ingredients];
-                  items[i].calories = Number(e.target.value);
-                  setIngredients(items);
-                }} 
-              />
-            </div>
-          ))}
-          <button 
-            type="button"
-            onClick={() => setIngredients([...ingredients, { item_name: '', amount: 0, unit: 'g', calories: 0 }])}
-            className="text-xs uppercase text-orange-600 mt-2 font-bold"
-          >
-            + Add Ingredient
-          </button>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
+      <div className="max-w-2xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors mb-6">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Menu
+          </Link>
+          <h1 className="text-4xl font-light text-slate-900 mb-2">Add New Recipe</h1>
+          <p className="text-slate-600">Share your culinary creation with detailed ingredients and instructions.</p>
         </div>
 
-        <button 
-          onClick={saveRecipe}
-          className="w-full bg-black text-white py-4 mt-10 hover:bg-gray-800 transition uppercase tracking-widest"
-        >
-          Save to Cookbook
-        </button>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
+          <div className="space-y-8">
+            {/* Recipe Title */}
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-2">
+                Recipe Name
+              </label>
+              <input
+                id="title"
+                type="text"
+                placeholder="e.g., Grandma's Chocolate Chip Cookies"
+                className="w-full px-4 py-3 text-lg border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none"
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+
+            {/* Recipe Description */}
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">
+                Description
+              </label>
+              <textarea
+                id="description"
+                placeholder="A brief description of your recipe, cooking tips, or story behind it..."
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none resize-none"
+                rows={4}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+
+            {/* Ingredients Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-slate-900">Ingredients</h3>
+                <span className="text-sm text-slate-500">{ingredients.length} items</span>
+              </div>
+
+              <div className="space-y-3">
+                {ingredients.map((ing, i) => (
+                  <div key={i} className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Ingredient name"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none"
+                        value={ing.item_name}
+                        onChange={(e) => {
+                          const items = [...ingredients];
+                          items[i].item_name = e.target.value;
+                          setIngredients(items);
+                        }}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <input
+                        type="number"
+                        placeholder="Cals"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none text-right"
+                        value={ing.calories || ''}
+                        onChange={(e) => {
+                          const items = [...ingredients];
+                          items[i].calories = Number(e.target.value);
+                          setIngredients(items);
+                        }}
+                      />
+                    </div>
+                    {ingredients.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const items = ingredients.filter((_, index) => index !== i);
+                          setIngredients(items);
+                        }}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200"
+                        aria-label="Remove ingredient"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIngredients([...ingredients, { item_name: '', amount: 0, unit: 'g', calories: 0 }])}
+                className="inline-flex items-center gap-2 mt-4 px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Ingredient
+              </button>
+            </div>
+
+            {/* Save Button */}
+            <div className="pt-6 border-t border-slate-200">
+              <button
+                onClick={saveRecipe}
+                className="w-full bg-slate-900 text-white py-3 px-6 font-medium rounded-lg hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                Save to Cookbook
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
