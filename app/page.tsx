@@ -71,49 +71,76 @@ export default function Home() {
   };
 
   return (
-    <main className="max-w-2xl mx-auto p-8 font-serif">
-      <header className="flex justify-between items-end mb-12 border-b-2 border-black pb-4">
-        <div>
-          <h1 className="text-5xl font-bold tracking-tighter uppercase">The Menu</h1>
-          <p className="text-sm uppercase tracking-[0.2em] text-gray-500 mt-2">Kitchen of Grieb</p>
-        </div>
-        <div className="flex gap-4">
-           <Link href="/menu" className="text-sm font-bold uppercase border-2 border-gray-200 px-4 py-2 hover:border-black transition">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <header className="flex justify-between items-end mb-16 border-b border-slate-200 pb-8">
+          <div>
+            <h1 className="text-6xl font-light tracking-tight text-slate-900 mb-2">The Menu</h1>
+            <p className="text-sm font-medium text-slate-500 tracking-wider uppercase">Kitchen of Grieb</p>
+          </div>
+          <div className="flex gap-3">
+            <Link href="/menu" className="px-6 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200 border border-slate-200 hover:border-slate-300">
+              Weekly Plan
+            </Link>
+            <Link href="/add-recipe" className="px-6 py-3 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md">
+              + Add Recipe
+            </Link>
+          </div>
+        </header>
+
+        {loading ? (
+          <div className="flex flex-col items-center py-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 mb-4"></div>
+            <p className="text-slate-500 font-medium">Loading your recipes...</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {recipes.length > 0 ? (
+              recipes.map((recipe) => (
+                <RecipeCard key={recipe.id} recipe={recipe} onDelete={deleteRecipe} />
+              ))
+            ) : (
+              <div className="text-center py-32">
+                <div className="w-24 h-24 mx-auto mb-6 bg-slate-100 rounded-full flex items-center justify-center">
+                  <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-medium text-slate-900 mb-2">Your cookbook is empty</h3>
+                <p className="text-slate-500 mb-6 max-w-sm mx-auto">Start building your collection of favorite recipes. Add your first one to get cooking!</p>
+                <Link href="/add-recipe" className="inline-flex items-center px-6 py-3 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow-md">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add Your First Recipe
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modern Navigation Footer */}
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-lg border border-slate-200 rounded-2xl shadow-lg px-8 py-4 flex gap-8">
+          <Link href="/" className="flex items-center gap-2 text-sm font-medium text-slate-900">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Home
+          </Link>
+          <Link href="/menu" className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
             Plan
           </Link>
-          <Link href="/add-recipe" className="text-sm font-bold uppercase border-2 border-black px-4 py-2 hover:bg-black hover:text-white transition">
-            + Add
+          <Link href="/shopping-list" className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            List
           </Link>
-        </div>
-      </header>
-
-      {loading ? (
-        <div className="flex flex-col items-center py-20">
-          <p className="italic text-gray-400 animate-pulse">Consulting the chef...</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {recipes.length > 0 ? (
-            recipes.map((recipe) => (
-              <RecipeCard key={recipe.id} recipe={recipe} onDelete={deleteRecipe} />
-            ))
-          ) : (
-            <div className="text-center py-20 border-2 border-dashed border-gray-100 rounded-xl">
-              <p className="text-gray-400 italic">The cookbook is empty.</p>
-              <Link href="/add-recipe" className="text-orange-600 text-sm font-bold uppercase mt-2 inline-block">
-                Add your first recipe
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Navigation Footer for easy access on mobile */}
-      <footer className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-md border border-gray-200 px-6 py-3 rounded-full shadow-xl flex gap-8">
-        <Link href="/" className="text-xs font-bold uppercase tracking-widest">Home</Link>
-        <Link href="/menu" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black">Weekly Plan</Link>
-        <Link href="/shopping-list" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black">List</Link>
-      </footer>
+        </nav>
+      </div>
     </main>
   );
 }
