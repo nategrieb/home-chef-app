@@ -21,8 +21,15 @@ export default function AddRecipe() {
     if (error) return alert("Error: " + error.message);
 
     // 2. Save ingredients linked to this recipe
-    const ingsWithId = ingredients.map(ing => ({ ...ing, recipe_id: recipe.id }));
-    const { error: ingError } = await supabase.from('ingredients').insert(ingsWithId);
+    const ingsWithId = ingredients.map(ing => ({
+    recipe_id: recipe.id,
+    item_name: ing.item_name,
+    amount: Number(ing.amount) || 0,
+    unit: ing.unit || 'g',
+    calories_per_unit: Number(ing.calories) || 0 // Map 'calories' to 'calories_per_unit'
+    }));
+
+const { error: ingError } = await supabase.from('ingredients').insert(ingsWithId);
 
     if (!ingError) {
       alert("Recipe added!");
