@@ -1,4 +1,6 @@
 // components/RecipeCard.tsx
+import Link from 'next/link';
+
 interface Ingredient {
   calories_per_unit: number;
 }
@@ -16,7 +18,7 @@ export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDel
 
   return (
     <div className="group relative bg-white rounded-xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-      <div className="p-6">
+      <Link href={`/recipes/${recipe.id}`} className="block p-6">
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0">
             <h3 className="text-xl font-medium text-slate-900 mb-2 group-hover:text-slate-700 transition-colors line-clamp-2">
@@ -38,6 +40,7 @@ export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDel
           </div>
           <button
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               if (confirm(`Delete "${recipe.title}"?`)) {
                 onDelete(recipe.id);
@@ -51,7 +54,7 @@ export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDel
             </svg>
           </button>
         </div>
-      </div>
+      </Link>
     </div>
   );
 }
