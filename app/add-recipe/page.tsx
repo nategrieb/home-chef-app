@@ -86,7 +86,7 @@ export default function AddRecipe() {
                 id="title"
                 type="text"
                 placeholder="e.g., Grandma's Chocolate Chip Cookies"
-                className="w-full px-4 py-3 text-lg border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none"
+                className="w-full px-4 py-3 text-lg border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none bg-white text-slate-900 placeholder:text-slate-500"
                 onChange={(e) => setTitle(e.target.value)}
               />
             </div>
@@ -99,7 +99,7 @@ export default function AddRecipe() {
               <textarea
                 id="description"
                 placeholder="A brief description of your recipe, cooking tips, or story behind it..."
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none resize-none"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none resize-none bg-white text-slate-900 placeholder:text-slate-500"
                 rows={4}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -115,7 +115,7 @@ export default function AddRecipe() {
                   <input
                     type="number"
                     placeholder="Amount"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none bg-white text-slate-900 placeholder:text-slate-500"
                     value={servingAmount}
                     onChange={(e) => setServingAmount(Number(e.target.value) || 1)}
                     min="1"
@@ -123,7 +123,7 @@ export default function AddRecipe() {
                 </div>
                 <div className="flex-1">
                   <select
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none bg-white"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none bg-white text-slate-900"
                     value={servingUnit}
                     onChange={(e) => setServingUnit(e.target.value)}
                   >
@@ -151,7 +151,7 @@ export default function AddRecipe() {
                       <input
                         type="text"
                         placeholder="Ingredient name"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none bg-white text-slate-900 placeholder:text-slate-500"
                         value={ing.item_name}
                         onChange={(e) => {
                           const items = [...ingredients];
@@ -164,7 +164,7 @@ export default function AddRecipe() {
                       <input
                         type="number"
                         placeholder="Qty"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none text-right"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none bg-white text-slate-900 placeholder:text-slate-500 text-right"
                         value={ing.amount || ''}
                         onChange={(e) => {
                           const items = [...ingredients];
@@ -177,7 +177,7 @@ export default function AddRecipe() {
                       <input
                         type="text"
                         placeholder="Unit"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none text-center text-sm"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 outline-none bg-white text-slate-900 placeholder:text-slate-500 text-center text-sm"
                         value={ing.unit}
                         onChange={(e) => {
                           const items = [...ingredients];
