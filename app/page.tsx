@@ -13,6 +13,7 @@ interface Recipe {
   title: string;
   description?: string;
   servings?: number;
+  serving_unit?: string;
   ingredients?: Ingredient[];
 }
 
