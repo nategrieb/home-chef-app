@@ -4,8 +4,20 @@ import { supabase } from '../lib/supabase';
 import RecipeCard from '../components/RecipeCard';
 import Link from 'next/link';
 
+interface Ingredient {
+  calories_per_unit: number;
+}
+
+interface Recipe {
+  id: string;
+  title: string;
+  description?: string;
+  servings?: number;
+  ingredients?: Ingredient[];
+}
+
 export default function Home() {
-  const [recipes, setRecipes] = useState<any[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,6 +50,26 @@ export default function Home() {
     fetchRecipes();
   }, []);
 
+  const deleteRecipe = async (id: string) => {
+    try {
+      // First delete ingredients (due to foreign key constraints)
+      await supabase.from('ingredients').delete().eq('recipe_id', id);
+      
+      // Then delete the recipe
+      const { error } = await supabase.from('recipes').delete().eq('id', id);
+      
+      if (error) {
+        alert("Error deleting recipe: " + error.message);
+      } else {
+        // Update local state to remove the recipe from the UI
+        setRecipes(recipes.filter(recipe => recipe.id !== id));
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Failed to delete recipe");
+    }
+  };
+
   return (
     <main className="max-w-2xl mx-auto p-8 font-serif">
       <header className="flex justify-between items-end mb-12 border-b-2 border-black pb-4">
@@ -63,7 +95,7 @@ export default function Home() {
         <div className="space-y-2">
           {recipes.length > 0 ? (
             recipes.map((recipe) => (
-              <RecipeCard key={recipe.id} recipe={recipe} />
+              <RecipeCard key={recipe.id} recipe={recipe} onDelete={deleteRecipe} />
             ))
           ) : (
             <div className="text-center py-20 border-2 border-dashed border-gray-100 rounded-xl">
