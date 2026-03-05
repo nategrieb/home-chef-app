@@ -1,6 +1,6 @@
 // components/RecipeCard.tsx
 interface Ingredient {
-  calories: number;
+  calories_per_unit: number;
 }
 
 interface Recipe {
@@ -13,7 +13,7 @@ interface Recipe {
 
 export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDelete: (id: string) => void }) {
   // Calculate total calories from ingredients (we'll do this in the DB later, but for now...)
-  const totalCals = recipe.ingredients?.reduce((acc: number, ing: Ingredient) => acc + (ing.calories || 0), 0);
+  const totalCals = recipe.ingredients?.reduce((acc: number, ing: Ingredient) => acc + (ing.calories_per_unit || 0), 0) || 0;
 
   return (
     <div className="flex justify-between items-start py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer group">
