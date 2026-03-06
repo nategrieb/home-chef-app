@@ -34,22 +34,37 @@ export default function RecipeDetail() {
   }, [params.id]);
 
   const saveChanges = async () => {
+    // Filter out empty ingredients
+    const validIngredients = ingredients.filter(ing => 
+      ing.item_name.trim() !== '' && 
+      (ing.amount !== '' || ing.unit.trim() !== '')
+    );
+
+    // Prevent saving if no valid ingredients remain and original recipe had ingredients
+    if (validIngredients.length === 0 && recipe.ingredients && recipe.ingredients.length > 0) {
+      alert('Cannot save recipe with no ingredients. Please add at least one ingredient or cancel editing.');
+      return;
+    }
+
     const { error } = await supabase
       .from('recipes')
       .update({ title, description, source_url: sourceUrl, instructions })
       .eq('id', params.id);
 
     if (!error) {
-      // Re-sync ingredients
+      // Re-sync ingredients - only delete and re-insert if there are valid ingredients
       await supabase.from('ingredients').delete().eq('recipe_id', params.id);
-      const ingsWithId = ingredients.map(ing => ({ 
-        item_name: ing.item_name, 
-        amount: ing.amount, 
-        unit: ing.unit, 
-        recipe_id: params.id, 
-        calories_per_unit: 0 
-      }));
-      await supabase.from('ingredients').insert(ingsWithId);
+      
+      if (validIngredients.length > 0) {
+        const ingsWithId = validIngredients.map(ing => ({ 
+          item_name: ing.item_name.trim(), 
+          amount: ing.amount || 0, 
+          unit: ing.unit.trim() || 'g', 
+          recipe_id: params.id, 
+          calories_per_unit: 0 
+        }));
+        await supabase.from('ingredients').insert(ingsWithId);
+      }
       
       setIsEditing(false);
       window.location.reload();
