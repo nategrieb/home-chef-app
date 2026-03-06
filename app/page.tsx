@@ -80,8 +80,11 @@ export default function Home() {
             <p className="text-sm font-medium text-slate-500 tracking-wider uppercase">Kitchen of Grieb</p>
           </div>
           <div className="flex gap-3">
-            <Link href="/menu" className="px-6 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200 border border-slate-200 hover:border-slate-300">
-              Weekly Plan
+            <Link href="/meal-plan" className="px-6 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200 border border-slate-200 hover:border-slate-300">
+              Meal Plan
+            </Link>
+            <Link href="/shopping-list" className="px-6 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200 border border-slate-200 hover:border-slate-300">
+              Shopping List
             </Link>
             <Link href="/add-recipe" className="px-6 py-3 text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md">
               + Add Recipe
