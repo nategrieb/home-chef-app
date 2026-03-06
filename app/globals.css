@@ -66,26 +66,70 @@ body {
 }
 
 @keyframes orderInFade {
-  from {
+  0% {
     opacity: 0;
   }
-  to {
+  100% {
     opacity: 1;
+  }
+}
+
+@keyframes orderBackdropPulse {
+  0% {
+    background: rgba(6, 78, 59, 0.2);
+  }
+  50% {
+    background: rgba(6, 78, 59, 0.55);
+  }
+  100% {
+    background: rgba(15, 23, 42, 0.7);
   }
 }
 
 @keyframes orderInPop {
   0% {
-    transform: scale(0.7);
+    transform: scale(0.45) rotate(-8deg);
     opacity: 0;
   }
-  60% {
-    transform: scale(1.05);
+  48% {
+    transform: scale(1.12) rotate(2deg);
     opacity: 1;
   }
+  72% {
+    transform: scale(0.96) rotate(-1deg);
+  }
   100% {
-    transform: scale(1);
+    transform: scale(1) rotate(0deg);
     opacity: 1;
+  }
+}
+
+@keyframes orderBurst {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+@keyframes orderCheckPulse {
+  0% {
+    transform: scale(0.5) rotate(-18deg);
+    box-shadow: 0 0 0 0 rgba(6, 95, 70, 0.65);
+  }
+  65% {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 0 0 24px rgba(6, 95, 70, 0);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 0 0 0 rgba(6, 95, 70, 0);
   }
 }
 
@@ -97,32 +141,63 @@ body {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(3px);
-  animation: orderInFade 180ms ease-out;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  animation: orderInFade 220ms ease-out, orderBackdropPulse 700ms ease-out;
 }
 
 .order-success-card {
+  position: relative;
+  z-index: 2;
   width: 100%;
-  max-width: 24rem;
-  border-radius: 1rem;
-  border: 1px solid #d1fae5;
-  background: linear-gradient(140deg, #f0fdf4 0%, #dcfce7 100%);
-  box-shadow: 0 20px 45px rgba(6, 78, 59, 0.2);
-  padding: 1.25rem;
+  max-width: 26rem;
+  border-radius: 1.25rem;
+  border: 1px solid #86efac;
+  background: linear-gradient(140deg, #ecfdf5 0%, #bbf7d0 48%, #dcfce7 100%);
+  box-shadow: 0 26px 70px rgba(4, 120, 87, 0.35);
+  padding: 1.6rem 1.4rem;
   text-align: center;
-  animation: orderInPop 260ms ease-out;
+  animation: orderInPop 560ms cubic-bezier(0.18, 0.86, 0.23, 1.25);
 }
 
 .order-success-pop {
-  width: 3rem;
-  height: 3rem;
+  width: 3.8rem;
+  height: 3.8rem;
   border-radius: 999px;
-  margin: 0 auto 0.75rem;
+  margin: 0 auto 0.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #065f46;
+  background: radial-gradient(circle at 30% 30%, #10b981, #065f46 68%);
   color: #fff;
   font-weight: 800;
+  font-size: 1.4rem;
+  animation: orderCheckPulse 780ms ease-out;
+}
+
+.order-success-burst {
+  position: absolute;
+  width: min(72vw, 26rem);
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(110, 231, 183, 0.8) 0%, rgba(110, 231, 183, 0.34) 32%, rgba(110, 231, 183, 0) 70%),
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(52, 211, 153, 0.52) 0deg 14deg,
+      rgba(16, 185, 129, 0.16) 14deg 30deg,
+      rgba(52, 211, 153, 0.52) 30deg 44deg
+    );
+  filter: saturate(1.2) blur(1px);
+  z-index: 1;
+  animation: orderBurst 760ms ease-out;
+}
+
+.order-success-sub {
+  margin-top: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #047857;
 }

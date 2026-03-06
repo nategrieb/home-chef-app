@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
 
@@ -11,6 +12,7 @@ interface OrderIngredient {
 }
 
 export default function SubmitOrderPage() {
+  const router = useRouter();
   const [selectedRecipeId, setSelectedRecipeId] = useState('');
   const [orderTitle, setOrderTitle] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
@@ -50,9 +52,12 @@ export default function SubmitOrderPage() {
 
   useEffect(() => {
     if (!showSuccess) return;
-    const timer = window.setTimeout(() => setShowSuccess(false), 1700);
+    const timer = window.setTimeout(() => {
+      setShowSuccess(false);
+      router.push('/');
+    }, 2300);
     return () => window.clearTimeout(timer);
-  }, [showSuccess]);
+  }, [showSuccess, router]);
 
   const hasActiveOrder =
     orderTitle.trim().length > 0 ||
@@ -246,7 +251,7 @@ export default function SubmitOrderPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-32 px-4 sm:px-6 pt-8 sm:pt-10">
       <div className="max-w-3xl mx-auto">
       <header className="mb-8">
         <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3">
@@ -273,6 +278,17 @@ export default function SubmitOrderPage() {
           </div>
         </section>
       )}
+
+      <div className="mb-6">
+        <button
+          type="button"
+          onClick={submitOrder}
+          disabled={saving}
+          className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm"
+        >
+          {saving ? 'Submitting...' : 'Submit Current Order'}
+        </button>
+      </div>
 
       <section className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-5">
         <h2 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700">Order Details</h2>
@@ -451,27 +467,25 @@ export default function SubmitOrderPage() {
           </p>
           <p className="text-xs text-slate-500 mt-2">Keep pressing that button and the order might come faster, just might.</p>
         </div>
-      </section>
 
-      <div className="fixed left-0 right-0 bottom-24 sm:bottom-28 z-[75] px-4 sm:px-6 pointer-events-none">
-        <div className="max-w-3xl mx-auto bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-2xl p-3 pointer-events-auto">
-          <button
-            type="button"
-            onClick={submitOrder}
-            disabled={saving}
-            className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm"
-          >
-            {saving ? 'Submitting...' : 'Submit Current Order'}
-          </button>
-        </div>
-      </div>
+        <button
+          type="button"
+          onClick={submitOrder}
+          disabled={saving}
+          className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm"
+        >
+          {saving ? 'Submitting...' : 'Submit Current Order'}
+        </button>
+      </section>
 
       {showSuccess && (
         <div className="order-success-backdrop" aria-live="polite" role="status">
+          <div className="order-success-burst" aria-hidden="true" />
           <div className="order-success-card">
             <div className="order-success-pop">✓</div>
             <p className="text-xl font-black text-slate-900">Your order is in</p>
-            <p className="text-sm text-slate-600 font-semibold">We saved it as your current order.</p>
+            <p className="text-sm text-slate-700 font-semibold">Really proud of you</p>
+            <p className="order-success-sub">So anyhow, see ya later</p>
           </div>
         </div>
       )}
