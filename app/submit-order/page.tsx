@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
 
@@ -68,6 +68,40 @@ export default function SubmitOrderPage() {
     () => recipes.find((r) => r.id === selectedRecipeId)?.title || 'No recipe selected',
     [recipes, selectedRecipeId]
   );
+
+  const focusOrderIngredientName = (index: number) => {
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById(`order-ingredient-name-${index}`) as HTMLInputElement | null;
+      input?.focus();
+    });
+  };
+
+  const appendOrderIngredient = (focusNewRow = false) => {
+    let nextIndex = 0;
+    setIngredients((prev) => {
+      nextIndex = prev.length;
+      return [...prev, { item_name: '', amount: '', unit: '' }];
+    });
+
+    if (focusNewRow) {
+      window.setTimeout(() => focusOrderIngredientName(nextIndex), 0);
+    }
+  };
+
+  const handleOrderIngredientEnter = (
+    event: KeyboardEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+
+    if (index === ingredients.length - 1) {
+      appendOrderIngredient(true);
+      return;
+    }
+
+    focusOrderIngredientName(index + 1);
+  };
 
   async function loadFromRecipe() {
     if (!selectedRecipeId) return;
@@ -237,18 +271,12 @@ export default function SubmitOrderPage() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-700">Ingredients</h2>
-            <button
-              type="button"
-              onClick={() => setIngredients((prev) => [...prev, { item_name: '', amount: '', unit: '' }])}
-              className="text-xs font-black uppercase tracking-wide text-[#004225]"
-            >
-              + Add
-            </button>
           </div>
           <div className="space-y-2">
             {ingredients.map((ing, i) => (
-              <div key={i} className="grid grid-cols-[minmax(0,1fr)_72px_72px_auto] gap-2 items-center">
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_64px_64px_auto] sm:grid-cols-[minmax(0,1fr)_72px_72px_auto] gap-2 items-center">
                 <input
+                  id={`order-ingredient-name-${i}`}
                   value={ing.item_name}
                   placeholder="Ingredient"
                   onChange={(e) => {
@@ -256,6 +284,7 @@ export default function SubmitOrderPage() {
                     next[i].item_name = e.target.value;
                     setIngredients(next);
                   }}
+                  onKeyDown={(e) => handleOrderIngredientEnter(e, i)}
                   className="w-full min-w-0 bg-white border border-slate-300 p-2.5 rounded-lg font-semibold text-black outline-none"
                   style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 />
@@ -267,6 +296,7 @@ export default function SubmitOrderPage() {
                     next[i].amount = e.target.value;
                     setIngredients(next);
                   }}
+                  onKeyDown={(e) => handleOrderIngredientEnter(e, i)}
                   className="w-full bg-white border border-slate-300 p-2.5 rounded-lg text-center font-semibold text-black outline-none"
                   style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 />
@@ -278,6 +308,7 @@ export default function SubmitOrderPage() {
                     next[i].unit = e.target.value;
                     setIngredients(next);
                   }}
+                  onKeyDown={(e) => handleOrderIngredientEnter(e, i)}
                   className="w-full bg-white border border-slate-300 p-2.5 rounded-lg text-center font-semibold text-black outline-none"
                   style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 />
@@ -293,6 +324,14 @@ export default function SubmitOrderPage() {
             {ingredients.length === 0 && (
               <p className="text-sm text-slate-500">No ingredients yet. Load a recipe or add manually.</p>
             )}
+            <button
+              type="button"
+              onClick={() => appendOrderIngredient(true)}
+              className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-3 rounded-xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors"
+            >
+              + Add Ingredient
+            </button>
+            <p className="text-xs text-slate-500">Press Return in any ingredient field to jump to the next line.</p>
           </div>
         </div>
 

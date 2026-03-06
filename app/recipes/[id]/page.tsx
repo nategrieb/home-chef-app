@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useParams, useSearchParams } from 'next/navigation';
 import MobileNav from '../../../components/MobileNav';
@@ -156,6 +156,40 @@ export default function RecipeDetail() {
         ? current.filter((value) => value !== diet)
         : [...current, diet]
     );
+  };
+
+  const focusRecipeIngredientName = (index: number) => {
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById(`recipe-ingredient-name-${index}`) as HTMLInputElement | null;
+      input?.focus();
+    });
+  };
+
+  const appendRecipeIngredient = (focusNewRow = false) => {
+    let nextIndex = 0;
+    setIngredients((prev) => {
+      nextIndex = prev.length;
+      return [...prev, { item_name: '', amount: '', unit: 'g' }];
+    });
+
+    if (focusNewRow) {
+      window.setTimeout(() => focusRecipeIngredientName(nextIndex), 0);
+    }
+  };
+
+  const handleRecipeIngredientEnter = (
+    event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
+    index: number
+  ) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+
+    if (index === ingredients.length - 1) {
+      appendRecipeIngredient(true);
+      return;
+    }
+
+    focusRecipeIngredientName(index + 1);
   };
 
   const addToPlan = async () => {
@@ -459,9 +493,11 @@ export default function RecipeDetail() {
                 {isEditing ? (
                   <div className="grid gap-3 w-full">
                     <input 
+                      id={`recipe-ingredient-name-${i}`}
                       value={ing.item_name} 
                       placeholder="Ingredient name"
                       onChange={e => { const n = [...ingredients]; n[i].item_name = e.target.value; setIngredients(n); }} 
+                      onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
                       className="w-full bg-white border border-slate-300 p-3 rounded-lg font-bold text-black outline-none min-w-0" 
                       style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                     />
@@ -470,12 +506,14 @@ export default function RecipeDetail() {
                         value={ing.amount} 
                         placeholder="Qty"
                         onChange={e => { const n = [...ingredients]; n[i].amount = e.target.value; setIngredients(n); }} 
+                        onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
                         className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none" 
                         style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                       />
                       <select
                         value={ing.unit || 'g'}
                         onChange={e => { const n = [...ingredients]; n[i].unit = e.target.value; setIngredients(n); }}
+                        onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
                         className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none"
                         style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                       >
@@ -497,7 +535,7 @@ export default function RecipeDetail() {
               </div>
             ))}
             {isEditing && (
-              <button onClick={() => setIngredients([...ingredients, { item_name: '', amount: '', unit: 'g' }])} className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors">+ Add Ingredient</button>
+              <button onClick={() => appendRecipeIngredient(true)} className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors">+ Add Ingredient</button>
             )}
           </div>
         </section>
