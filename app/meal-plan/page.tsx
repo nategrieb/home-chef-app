@@ -31,6 +31,7 @@ export default function MealPlan() {
   useEffect(() => { fetchData(); }, []);
 
   async function addMealToPlan(recipeId: string, dayIndex: number) {
+    if (!recipeId) return;
     const { error } = await supabase.from('meal_plans').insert([{ recipe_id: recipeId, day_of_week: dayIndex }]);
     if (!error) {
       fetchData();
@@ -49,11 +50,11 @@ export default function MealPlan() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-24">
+    <main className="min-h-screen bg-slate-50 pb-32">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <header className="mb-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-slate-900">Weekly Plan</h1>
-          <Link href="/shopping-list" className="bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+          <Link href="/shopping-list" className="bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg active:scale-90 transition-transform">
             View List
           </Link>
         </header>
@@ -79,7 +80,6 @@ export default function MealPlan() {
                       <p className="text-xs text-slate-500 line-clamp-1">{meal.recipe?.description}</p>
                     </Link>
                     
-                    {/* Dedicated Mobile Tap Target for Deletion */}
                     <button
                       onClick={() => removeMealFromPlan(meal.id)}
                       className="h-12 w-12 flex items-center justify-center bg-red-50 text-red-500 rounded-xl active:bg-red-500 active:text-white transition-all shadow-sm"
@@ -103,34 +103,61 @@ export default function MealPlan() {
           ))}
         </div>
 
-        {/* Floating Add Modal */}
+        {/* Add Meal Modal */}
         {selectedDate && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
             <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-8 shadow-2xl animate-in slide-in-from-bottom-full duration-300">
               <h3 className="text-xl font-bold mb-4 text-slate-900">What's for dinner?</h3>
-              <select
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl mb-6 outline-none focus:border-orange-500"
-                value={selectedRecipe}
-                onChange={(e) => setSelectedRecipe(e.target.value)}
-              >
-                <option value="">Select a recipe...</option>
-                {recipes.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
-              </select>
+              
+              <div className="relative mb-6">
+                <select
+                  className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl appearance-none text-slate-900 font-medium focus:border-orange-500 focus:ring-0 outline-none transition-colors"
+                  value={selectedRecipe}
+                  onChange={(e) => setSelectedRecipe(e.target.value)}
+                  style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
+                >
+                  <option value="" className="text-slate-500">Choose a recipe...</option>
+                  {recipes.map(r => (
+                    <option key={r.id} value={r.id} className="text-slate-900 bg-white">
+                      {r.title}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+
               <div className="flex gap-4">
-                <button onClick={() => addMealToPlan(selectedRecipe, parseInt(selectedDate))} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform">Add to Plan</button>
-                <button onClick={() => setSelectedDate('')} className="px-6 py-4 text-slate-500 font-bold">Cancel</button>
+                <button 
+                  onClick={() => addMealToPlan(selectedRecipe, parseInt(selectedDate))} 
+                  disabled={!selectedRecipe}
+                  className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-bold active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 transition-all"
+                >
+                  Add to Plan
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedDate('');
+                    setSelectedRecipe('');
+                  }} 
+                  className="px-6 py-4 text-slate-500 font-bold hover:text-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
         )}
-      </div>
 
-      {/* Navigation Bar for easy access on mobile */}
-      <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md border border-slate-200 px-6 py-3 rounded-full shadow-2xl flex gap-8 z-40">
-        <Link href="/" className="text-xs font-bold uppercase tracking-widest text-slate-400">Home</Link>
-        <Link href="/meal-plan" className="text-xs font-bold uppercase tracking-widest text-orange-600">Plan</Link>
-        <Link href="/shopping-list" className="text-xs font-bold uppercase tracking-widest text-slate-400">List</Link>
-      </footer>
+        <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md border border-slate-200 px-6 py-3 rounded-full shadow-2xl flex gap-8 z-40">
+          <Link href="/" className="text-xs font-bold uppercase tracking-widest text-slate-400">Home</Link>
+          <Link href="/meal-plan" className="text-xs font-bold uppercase tracking-widest text-orange-600">Plan</Link>
+          <Link href="/shopping-list" className="text-xs font-bold uppercase tracking-widest text-slate-400">List</Link>
+        </footer>
+      </div>
     </main>
   );
 }
