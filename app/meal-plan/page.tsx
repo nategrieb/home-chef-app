@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
 import { format, startOfWeek } from 'date-fns';
+import MobileNav from '../../components/MobileNav';
 
 export default function MealPlan() {
   const [mealPlans, setMealPlans] = useState<any[]>([]);
@@ -12,8 +13,7 @@ export default function MealPlan() {
   const [selectedRecipe, setSelectedRecipe] = useState<string>('');
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(weekStart);
     date.setDate(weekStart.getDate() + i);
@@ -33,131 +33,73 @@ export default function MealPlan() {
   async function addMealToPlan(recipeId: string, dayIndex: number) {
     if (!recipeId) return;
     const { error } = await supabase.from('meal_plans').insert([{ recipe_id: recipeId, day_of_week: dayIndex }]);
-    if (!error) {
-      fetchData();
-      setSelectedDate('');
-      setSelectedRecipe('');
-    }
+    if (!error) { fetchData(); setSelectedDate(''); setSelectedRecipe(''); }
   }
 
   async function removeMealFromPlan(mealPlanId: string) {
-    setRemovingId(mealPlanId); // Trigger exit animation
+    setRemovingId(mealPlanId);
     setTimeout(async () => {
       await supabase.from('meal_plans').delete().eq('id', mealPlanId);
       setMealPlans(prev => prev.filter(p => p.id !== mealPlanId));
       setRemovingId(null);
-    }, 300); // Match animation duration
+    }, 300);
   }
 
+  if (loading) return <div className="p-20 text-center text-slate-900 font-bold">Loading Plan...</div>;
+
   return (
-    <main className="min-h-screen bg-slate-50 pb-32">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <header className="mb-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-slate-900">Weekly Plan</h1>
-          <Link href="/shopping-list" className="bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg active:scale-90 transition-transform">
-            View List
-          </Link>
-        </header>
+    <main className="min-h-screen bg-slate-50 pb-40 px-6 pt-10">
+      <header className="mb-10">
+        <h1 className="text-4xl font-black text-slate-900 leading-tight tracking-tighter">Weekly Plan</h1>
+        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Kitchen of Grieb</p>
+      </header>
 
-        <div className="space-y-6">
-          {weekDays.map((day, index) => (
-            <section key={index} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="bg-slate-50 px-6 py-3 border-b border-slate-100 flex justify-between items-center">
-                <h2 className="font-bold text-slate-800">{format(day, 'EEEE')}</h2>
-                <span className="text-xs text-slate-400 uppercase tracking-widest">{format(day, 'MMM d')}</span>
-              </div>
-
-              <div className="p-4 space-y-3">
-                {mealPlans.filter(p => p.day_of_week === index).map((meal) => (
-                  <div
-                    key={meal.id}
-                    className={`flex items-center gap-3 transition-all duration-300 transform ${
-                      removingId === meal.id ? "opacity-0 -translate-x-full scale-95" : "opacity-100 translate-x-0 scale-100 animate-in fade-in slide-in-from-right-4"
-                    }`}
-                  >
-                    <Link href={`/recipes/${meal.recipe?.id}`} className="flex-1 bg-slate-50 p-4 rounded-xl border border-slate-100 active:bg-slate-100 transition-colors">
-                      <p className="font-bold text-slate-900">{meal.recipe?.title}</p>
-                      <p className="text-xs text-slate-500 line-clamp-1">{meal.recipe?.description}</p>
-                    </Link>
-                    
-                    <button
-                      onClick={() => removeMealFromPlan(meal.id)}
-                      className="h-12 w-12 flex items-center justify-center bg-red-50 text-red-500 rounded-xl active:bg-red-500 active:text-white transition-all shadow-sm"
-                      aria-label="Remove meal"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-
-                <button
-                  onClick={() => setSelectedDate(`${index}`)}
-                  className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm font-medium active:border-orange-300 active:text-orange-500 transition-all"
-                >
-                  + Add meal to {format(day, 'EEEE')}
-                </button>
-              </div>
-            </section>
-          ))}
-        </div>
-
-        {/* Add Meal Modal */}
-        {selectedDate && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-            <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-8 shadow-2xl animate-in slide-in-from-bottom-full duration-300">
-              <h3 className="text-xl font-bold mb-4 text-slate-900">What's for dinner?</h3>
-              
-              <div className="relative mb-6">
-                <select
-                  className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl appearance-none text-slate-900 font-medium focus:border-orange-500 focus:ring-0 outline-none transition-colors"
-                  value={selectedRecipe}
-                  onChange={(e) => setSelectedRecipe(e.target.value)}
-                  style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
-                >
-                  <option value="" className="text-slate-500">Choose a recipe...</option>
-                  {recipes.map(r => (
-                    <option key={r.id} value={r.id} className="text-slate-900 bg-white">
-                      {r.title}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+      <div className="space-y-6">
+        {weekDays.map((day, index) => (
+          <section key={index} className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center font-black uppercase text-[10px] tracking-widest text-slate-400">
+              <span>{format(day, 'EEEE')}</span>
+              <span>{format(day, 'MMM d')}</span>
+            </div>
+            <div className="p-4 space-y-3">
+              {mealPlans.filter(p => p.day_of_week === index).map((meal) => (
+                <div key={meal.id} className={`flex items-center gap-3 transition-all duration-300 ${removingId === meal.id ? "opacity-0 -translate-x-full" : "opacity-100"}`}>
+                  <Link href={`/recipes/${meal.recipe?.id}`} className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100 active:bg-slate-100 font-bold text-slate-900">
+                    {meal.recipe?.title}
+                  </Link>
+                  <button onClick={() => removeMealFromPlan(meal.id)} className="h-14 w-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center font-black shadow-sm">×</button>
                 </div>
-              </div>
+              ))}
+              <button onClick={() => setSelectedDate(`${index}`)} className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs font-black uppercase tracking-widest active:border-[#004225] active:text-[#004225] transition-all">
+                + Add Meal
+              </button>
+            </div>
+          </section>
+        ))}
+      </div>
 
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => addMealToPlan(selectedRecipe, parseInt(selectedDate))} 
-                  disabled={!selectedRecipe}
-                  className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-bold active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 transition-all"
-                >
-                  Add to Plan
-                </button>
-                <button 
-                  onClick={() => {
-                    setSelectedDate('');
-                    setSelectedRecipe('');
-                  }} 
-                  className="px-6 py-4 text-slate-500 font-bold hover:text-slate-800 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
+      {/* Add Meal Modal */}
+      {selectedDate && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[60] flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-t-[3rem] sm:rounded-[3rem] p-10 shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+            <h3 className="text-2xl font-black mb-6 text-black">What's for dinner?</h3>
+            <select 
+              className="w-full p-5 bg-white border-2 border-slate-300 rounded-3xl text-black font-black outline-none mb-8 appearance-none" 
+              value={selectedRecipe} 
+              onChange={e => setSelectedRecipe(e.target.value)}
+              style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+            >
+              <option value="">Select a recipe...</option>
+              {recipes.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
+            </select>
+            <div className="flex gap-4">
+              <button onClick={() => addMealToPlan(selectedRecipe, parseInt(selectedDate))} disabled={!selectedRecipe} className="flex-[2] bg-[#004225] text-white py-5 rounded-3xl font-black uppercase tracking-widest shadow-xl disabled:bg-slate-200 transition-all">Add to Plan</button>
+              <button onClick={() => setSelectedDate('')} className="flex-1 text-slate-400 font-black uppercase text-xs">Cancel</button>
             </div>
           </div>
-        )}
-
-        <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md border border-slate-200 px-6 py-3 rounded-full shadow-2xl flex gap-8 z-40">
-          <Link href="/" className="text-xs font-bold uppercase tracking-widest text-slate-400">Home</Link>
-          <Link href="/meal-plan" className="text-xs font-bold uppercase tracking-widest text-orange-600">Plan</Link>
-          <Link href="/shopping-list" className="text-xs font-bold uppercase tracking-widest text-slate-400">List</Link>
-        </footer>
-      </div>
+        </div>
+      )}
+      <MobileNav />
     </main>
   );
 }
