@@ -201,9 +201,13 @@ export default function ShoppingList() {
                     </h3>
                     <div className="space-y-1">
                       {meals.map((meal) => (
-                        <p key={meal.id} className="text-sm text-slate-600">
+                        <Link
+                          key={meal.id}
+                          href={`/recipes/${meal.recipe?.id}`}
+                          className="block text-sm text-slate-600 hover:text-slate-900 hover:underline transition-colors"
+                        >
                           {meal.recipe?.title}
-                        </p>
+                        </Link>
                       ))}
                     </div>
                   </div>

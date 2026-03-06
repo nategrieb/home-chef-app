@@ -7,6 +7,7 @@ import { format, startOfWeek } from 'date-fns';
 interface Recipe {
   id: string;
   title: string;
+  description?: string;
   servings?: number;
   serving_unit?: string;
 }
@@ -40,7 +41,7 @@ export default function MealPlan() {
       .from('meal_plans')
       .select(`
         *,
-        recipes (*)
+        recipe:recipes (*)
       `)
       .order('day_of_week');
 
@@ -164,26 +165,34 @@ export default function MealPlan() {
 
               <div className="space-y-3 mb-4">
                 {getMealsForDay(index).map((meal) => (
-                  <div key={meal.id} className="group relative bg-slate-50 rounded-lg p-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-slate-900 truncate">
-                          {meal.recipe?.title}
-                        </h4>
-                        <p className="text-xs text-slate-500">
-                          Serves {meal.recipe?.servings || 4}
-                        </p>
+                  <div key={meal.id} className="group relative bg-gradient-to-br from-white to-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+                    <Link href={`/recipes/${meal.recipe?.id}`} className="block p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-base font-semibold text-slate-900 mb-2 group-hover:text-blue-700 transition-colors line-clamp-2 leading-tight">
+                            {meal.recipe?.title}
+                          </h4>
+                          {meal.recipe?.description && (
+                            <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">
+                              {meal.recipe.description}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            removeMealFromPlan(meal.id);
+                          }}
+                          className="ml-3 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100"
+                          aria-label="Remove meal"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       </div>
-                      <button
-                        onClick={() => removeMealFromPlan(meal.id)}
-                        className="ml-2 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all duration-200"
-                        aria-label="Remove meal"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
+                    </Link>
                   </div>
                 ))}
               </div>

@@ -21,6 +21,15 @@ interface Recipe {
   ingredients?: Ingredient[];
 }
 
+interface MealPlan {
+  id: string;
+  recipe_id: string;
+  day_of_week: number;
+  recipe?: {
+    title: string;
+  };
+}
+
 export default function RecipeDetail() {
   const params = useParams();
   const recipeId = params.id as string;
@@ -29,6 +38,7 @@ export default function RecipeDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [showMealPlanModal, setShowMealPlanModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
+  const [existingMealPlans, setExistingMealPlans] = useState<MealPlan[]>([]);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -46,6 +56,24 @@ export default function RecipeDetail() {
     date.setDate(weekStart.getDate() + i);
     return date;
   });
+
+  const fetchExistingMealPlans = async () => {
+    const { data, error } = await supabase
+      .from('meal_plans')
+      .select('*, recipe:recipes(title)')
+      .order('day_of_week');
+
+    if (error) {
+      console.error("Error fetching existing meal plans:", error);
+    } else {
+      setExistingMealPlans(data || []);
+    }
+  };
+
+  const openMealPlanModal = () => {
+    setShowMealPlanModal(true);
+    fetchExistingMealPlans();
+  };
 
   const servingUnits = [
     'servings',
@@ -111,8 +139,7 @@ export default function RecipeDetail() {
       .update({
         title,
         description,
-        servings: servingAmount,
-        serving_unit: servingUnit
+        servings: servingAmount
       })
       .eq('id', recipeId);
 
@@ -161,6 +188,19 @@ export default function RecipeDetail() {
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     try {
+      console.log('Adding recipe to meal plan:', { recipeId, dayIndex });
+
+      // Validate inputs
+      if (!recipeId) {
+        alert("Invalid recipe ID. Please refresh the page and try again.");
+        return;
+      }
+
+      if (dayIndex < 0 || dayIndex > 6) {
+        alert("Invalid day selected. Please try again.");
+        return;
+      }
+
       const { error } = await supabase
         .from('meal_plans')
         .insert([{
@@ -170,7 +210,15 @@ export default function RecipeDetail() {
 
       if (error) {
         console.error("Error adding to meal plan:", error);
-        alert("Error adding recipe to meal plan. Please make sure the meal_plans table exists in your database.");
+
+        // Check for specific error types
+        if (error.code === '23505') {
+          alert(`This recipe is already planned for ${dayNames[dayIndex]}.`);
+        } else if (error.code === 'PGRST116') {
+          alert("Database table not found. Please check your database setup.");
+        } else {
+          alert(`Error adding recipe to meal plan: ${error.message}`);
+        }
       } else {
         alert(`Recipe added to meal plan for ${dayNames[dayIndex]}!`);
         setShowMealPlanModal(false);
@@ -464,7 +512,7 @@ export default function RecipeDetail() {
                     Edit Recipe
                   </button>
                   <button
-                    onClick={() => setShowMealPlanModal(true)}
+                    onClick={openMealPlanModal}
                     className="w-full bg-white text-slate-700 py-3 px-6 font-medium rounded-lg border border-slate-300 hover:bg-slate-50 transition-all duration-200"
                   >
                     Add to Meal Plan
@@ -494,24 +542,50 @@ export default function RecipeDetail() {
                     Select a day this week
                   </label>
                   <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
-                    {weekDays.map((day, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedDate(`${index}`)}
-                        className={`p-3 text-left rounded-lg border transition-all duration-200 ${
-                          selectedDate === `${index}`
-                            ? 'border-slate-500 bg-slate-50'
-                            : 'border-slate-200 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="font-medium text-slate-900">
-                          {format(day, 'EEEE')}
-                        </div>
-                        <div className="text-sm text-slate-500">
-                          {format(day, 'MMM d, yyyy')}
-                        </div>
-                      </button>
-                    ))}
+                    {weekDays.map((day, index) => {
+                      const mealsForDay = existingMealPlans.filter(plan => plan.day_of_week === index);
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedDate(`${index}`)}
+                          className={`p-3 text-left rounded-lg border transition-all duration-200 ${
+                            selectedDate === `${index}`
+                              ? 'border-slate-500 bg-slate-50'
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium text-slate-900">
+                                {format(day, 'EEEE')}
+                              </div>
+                              <div className="text-sm text-slate-500">
+                                {format(day, 'MMM d, yyyy')}
+                              </div>
+                            </div>
+                            {mealsForDay.length > 0 && (
+                              <div className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">
+                                {mealsForDay.length} planned
+                              </div>
+                            )}
+                          </div>
+                          {mealsForDay.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {mealsForDay.slice(0, 2).map((meal) => (
+                                <div key={meal.id} className="text-xs text-slate-600 truncate">
+                                  • {meal.recipe?.title}
+                                </div>
+                              ))}
+                              {mealsForDay.length > 2 && (
+                                <div className="text-xs text-slate-400">
+                                  +{mealsForDay.length - 2} more
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
