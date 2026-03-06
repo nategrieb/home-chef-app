@@ -88,7 +88,7 @@ export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDel
                 onDelete(recipe.id);
               }
             }}
-            className="ml-4 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100"
+            className="ml-4 p-2.5 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 opacity-100 md:opacity-0 md:group-hover:opacity-100"
             aria-label="Delete recipe"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

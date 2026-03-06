@@ -15,6 +15,8 @@ const DIET_OPTIONS = [
   'Low-Carb',
 ] as const;
 
+const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'pinch', 'clove', 'slice', 'can'] as const;
+
 const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {
   Vegan: '🌱',
   Vegetarian: '🥕',
@@ -221,20 +223,23 @@ export default function RecipeDetail() {
                 style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 placeholder="Source URL"
               />
-              <div className="grid grid-cols-2 gap-4">
-                <select
-                  value={category}
-                  onChange={e => setCategory(e.target.value as any)}
-                  className="bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300"
-                  style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
-                >
-                  <option value="">Select Category</option>
-                  <option value="Breakfast">🍳 Breakfast</option>
-                  <option value="Lunch">🥗 Lunch</option>
-                  <option value="Dinner">🍽️ Dinner</option>
-                  <option value="Snack">🍿 Snack</option>
-                </select>
-                <div className="bg-white p-3 rounded-2xl border-2 border-slate-300">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
+                <div className="bg-white p-3 rounded-2xl border-2 border-slate-300 self-start">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-bold mb-2">Category</p>
+                  <select
+                    value={category}
+                    onChange={e => setCategory(e.target.value as any)}
+                    className="w-full bg-white p-3 rounded-xl text-black font-bold outline-none border-2 border-slate-300 min-h-[48px]"
+                    style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Breakfast">🍳 Breakfast</option>
+                    <option value="Lunch">🥗 Lunch</option>
+                    <option value="Dinner">🍽️ Dinner</option>
+                    <option value="Snack">🍿 Snack</option>
+                  </select>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border-2 border-slate-300 self-start">
                   <p className="text-xs uppercase tracking-wide text-slate-500 font-bold mb-2">Dietary Tags</p>
                   <div className="flex flex-wrap gap-2">
                     {DIET_OPTIONS.map((diet) => {
@@ -244,7 +249,7 @@ export default function RecipeDetail() {
                           key={diet}
                           type="button"
                           onClick={() => toggleDiet(diet)}
-                          className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
+                          className={`px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold border transition-colors ${
                             isSelected
                               ? 'bg-[#004225] text-white border-[#004225]'
                               : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
@@ -353,29 +358,35 @@ export default function RecipeDetail() {
             {ingredients.map((ing: any, i: number) => (
               <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 {isEditing ? (
-                  <div className="flex gap-3 w-full items-center">
+                  <div className="grid gap-3 w-full">
                     <input 
                       value={ing.item_name} 
                       placeholder="Ingredient name"
                       onChange={e => { const n = [...ingredients]; n[i].item_name = e.target.value; setIngredients(n); }} 
-                      className="flex-1 bg-white border border-slate-300 p-3 rounded-lg font-bold text-black outline-none" 
+                      className="w-full bg-white border border-slate-300 p-3 rounded-lg font-bold text-black outline-none min-w-0" 
                       style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                     />
-                    <input 
-                      value={ing.amount} 
-                      placeholder="Qty"
-                      onChange={e => { const n = [...ingredients]; n[i].amount = e.target.value; setIngredients(n); }} 
-                      className="w-16 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none" 
-                      style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
-                    />
-                    <input 
-                      value={ing.unit} 
-                      placeholder="Unit"
-                      onChange={e => { const n = [...ingredients]; n[i].unit = e.target.value; setIngredients(n); }} 
-                      className="w-16 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none" 
-                      style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
-                    />
-                    <button onClick={() => setIngredients(ingredients.filter((_, idx) => idx !== i))} className="w-8 h-8 bg-red-100 text-red-600 rounded-full font-black text-sm hover:bg-red-200 transition-colors">×</button>
+                    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 sm:grid-cols-[96px_1fr_auto] sm:max-w-sm">
+                      <input 
+                        value={ing.amount} 
+                        placeholder="Qty"
+                        onChange={e => { const n = [...ingredients]; n[i].amount = e.target.value; setIngredients(n); }} 
+                        className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none" 
+                        style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
+                      />
+                      <select
+                        value={ing.unit || 'g'}
+                        onChange={e => { const n = [...ingredients]; n[i].unit = e.target.value; setIngredients(n); }}
+                        className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none"
+                        style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                      >
+                        {ing.unit && !UNIT_OPTIONS.includes(ing.unit) && <option value={ing.unit}>{ing.unit}</option>}
+                        {UNIT_OPTIONS.map((unit) => (
+                          <option key={unit} value={unit}>{unit}</option>
+                        ))}
+                      </select>
+                      <button onClick={() => setIngredients(ingredients.filter((_, idx) => idx !== i))} className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-black text-sm hover:bg-red-200 transition-colors">×</button>
+                    </div>
                   </div>
                 ) : (
                   <label className="flex items-center gap-4 w-full cursor-pointer group">
