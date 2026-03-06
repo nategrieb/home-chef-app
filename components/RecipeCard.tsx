@@ -86,17 +86,30 @@ export default function RecipeCard({
               )}
             </div>
           </div>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onAddToPlan(recipe.id);
-            }}
-            className="ml-4 px-3 py-2 bg-[#004225] text-white rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#003319] transition-colors"
-            aria-label="Add recipe to plan"
-          >
-            + Plan
-          </button>
+          <div className="ml-4 flex flex-col gap-2">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onAddToPlan(recipe.id);
+              }}
+              className="px-3 py-2 bg-[#004225] text-white rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#003319] transition-colors"
+              aria-label="Add recipe to plan"
+            >
+              + Plan
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = `/submit-order?recipeId=${recipe.id}&autoload=1`;
+              }}
+              className="px-3 py-2 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-emerald-200 transition-colors"
+              aria-label="Start order from recipe"
+            >
+              Order
+            </button>
+          </div>
         </div>
       </Link>
     </div>

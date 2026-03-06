@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
 
@@ -10,13 +10,7 @@ interface OrderIngredient {
   unit: string;
 }
 
-interface RecipeSummary {
-  id: string;
-  title: string;
-}
-
 export default function SubmitOrderPage() {
-  const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [selectedRecipeId, setSelectedRecipeId] = useState('');
   const [orderTitle, setOrderTitle] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
@@ -25,24 +19,19 @@ export default function SubmitOrderPage() {
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [loadingRecipe, setLoadingRecipe] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'error' | 'info'; message: string } | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'instructions'>('ingredients');
+  const [queryRecipeHandled, setQueryRecipeHandled] = useState(false);
 
   useEffect(() => {
     async function loadData() {
-      const [{ data: recipeList }, { data: currentOrder }] = await Promise.all([
-        supabase.from('recipes').select('id, title').order('title'),
-        supabase
-          .from('current_orders')
-          .select('recipe_id, order_title, order_notes, order_ingredients, order_instructions, updated_at')
-          .eq('id', 'current')
-          .maybeSingle(),
-      ]);
-
-      setRecipes((recipeList || []) as RecipeSummary[]);
+      const { data: currentOrder } = await supabase
+        .from('current_orders')
+        .select('recipe_id, order_title, order_notes, order_ingredients, order_instructions, updated_at')
+        .eq('id', 'current')
+        .maybeSingle();
 
       if (currentOrder) {
         setSelectedRecipeId(currentOrder.recipe_id || '');
@@ -65,10 +54,11 @@ export default function SubmitOrderPage() {
     return () => window.clearTimeout(timer);
   }, [showSuccess]);
 
-  const selectedRecipeName = useMemo(
-    () => recipes.find((r) => r.id === selectedRecipeId)?.title || 'No recipe selected',
-    [recipes, selectedRecipeId]
-  );
+  const hasActiveOrder =
+    orderTitle.trim().length > 0 ||
+    orderNotes.trim().length > 0 ||
+    ingredients.length > 0 ||
+    instructions.length > 0;
 
   const focusOrderIngredientName = (index: number) => {
     window.requestAnimationFrame(() => {
@@ -138,28 +128,27 @@ export default function SubmitOrderPage() {
     focusOrderInstruction(index + 1);
   };
 
-  async function loadFromRecipe() {
-    if (!selectedRecipeId) return;
+  async function loadRecipeById(recipeId: string) {
+    if (!recipeId) return;
 
-    setLoadingRecipe(true);
     const [{ data: recipeData }, { data: ingredientData }] = await Promise.all([
       supabase
         .from('recipes')
         .select('title, description, instructions')
-        .eq('id', selectedRecipeId)
+        .eq('id', recipeId)
         .single(),
       supabase
         .from('ingredients')
         .select('item_name, amount, unit')
-        .eq('recipe_id', selectedRecipeId),
+        .eq('recipe_id', recipeId),
     ]);
 
     if (!recipeData) {
       setFeedback({ type: 'error', message: 'Could not load recipe details.' });
-      setLoadingRecipe(false);
       return;
     }
 
+    setSelectedRecipeId(recipeId);
     setOrderTitle(recipeData.title || '');
     setOrderNotes(recipeData.description || '');
 
@@ -173,8 +162,26 @@ export default function SubmitOrderPage() {
 
     setInstructions(Array.isArray(recipeData.instructions) ? recipeData.instructions : []);
     setFeedback({ type: 'info', message: 'Recipe loaded. You can customize and submit.' });
-    setLoadingRecipe(false);
   }
+
+  useEffect(() => {
+    if (loading || queryRecipeHandled) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const recipeId = params.get('recipeId');
+    const autoload = params.get('autoload') === '1';
+
+    if (recipeId) {
+      setSelectedRecipeId(recipeId);
+      if (autoload) {
+        void loadRecipeById(recipeId);
+      }
+      setQueryRecipeHandled(true);
+      return;
+    }
+
+    setQueryRecipeHandled(true);
+  }, [loading, queryRecipeHandled]);
 
   async function submitOrder() {
     if (!orderTitle.trim()) {
@@ -239,42 +246,36 @@ export default function SubmitOrderPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white pb-40 px-6 pt-10">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
+      <div className="max-w-3xl mx-auto">
       <header className="mb-8">
-        <h1 className="text-4xl font-black text-slate-900 leading-tight tracking-tighter">Submit Order</h1>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Build and save your current order</p>
+        <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3">
+          Current Order
+        </p>
+        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 leading-tight tracking-tighter">Submit Order</h1>
+        <p className="text-sm sm:text-base text-slate-600 mt-2">Build your active order, customize it, and save it for the kitchen.</p>
       </header>
 
-      <section className="bg-slate-100 rounded-3xl border border-slate-200 p-4 sm:p-6 mb-6 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3">
-          <select
-            value={selectedRecipeId}
-            onChange={(e) => setSelectedRecipeId(e.target.value)}
-            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 outline-none"
-          >
-            <option value="">Select a recipe to start from...</option>
-            {recipes.map((recipe) => (
-              <option key={recipe.id} value={recipe.id}>
-                {recipe.title}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={loadFromRecipe}
-            disabled={!selectedRecipeId || loadingRecipe}
-            className="bg-[#004225] text-white px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300"
-          >
-            {loadingRecipe ? 'Loading...' : 'Load Recipe'}
-          </button>
-        </div>
+      {hasActiveOrder && (
+        <section className="bg-red-50 rounded-3xl border border-red-200 p-4 sm:p-5 mb-6 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-600 mb-1">Active Order</p>
+              <p className="text-sm font-semibold text-red-700">Need to start over? Clear the current order first.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowClearConfirm(true)}
+              className="shrink-0 bg-white border border-red-300 text-red-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wide"
+            >
+              Clear Active Order
+            </button>
+          </div>
+        </section>
+      )}
 
-        <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
-          Selected: {selectedRecipeName}
-        </div>
-      </section>
-
-      <section className="bg-slate-50 rounded-3xl border border-slate-200 p-4 sm:p-6 space-y-4">
+      <section className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-5">
+        <h2 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700">Order Details</h2>
         {feedback && (
           <div
             className={`rounded-xl px-3 py-2 text-sm font-semibold ${
@@ -290,7 +291,7 @@ export default function SubmitOrderPage() {
         <input
           value={orderTitle}
           onChange={(e) => setOrderTitle(e.target.value)}
-          className="w-full bg-white border border-slate-300 p-3 rounded-xl font-bold text-black outline-none"
+          className="w-full bg-white border border-slate-300 p-3 rounded-xl font-bold text-black outline-none focus:ring-2 focus:ring-[#004225]/30 focus:border-[#004225]"
           placeholder="Order title"
           style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
         />
@@ -298,7 +299,7 @@ export default function SubmitOrderPage() {
         <textarea
           value={orderNotes}
           onChange={(e) => setOrderNotes(e.target.value)}
-          className="w-full bg-white border border-slate-300 p-3 rounded-xl text-black font-medium outline-none min-h-[90px]"
+          className="w-full bg-white border border-slate-300 p-3 rounded-xl text-black font-medium outline-none min-h-[90px] focus:ring-2 focus:ring-[#004225]/30 focus:border-[#004225]"
           placeholder="Order notes or custom requests"
           style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
         />
@@ -329,7 +330,7 @@ export default function SubmitOrderPage() {
         </div>
 
         {activeTab === 'ingredients' && (
-        <div>
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-700">Ingredients</h2>
           </div>
@@ -346,7 +347,7 @@ export default function SubmitOrderPage() {
                     setIngredients(next);
                   }}
                   onKeyDown={(e) => handleOrderIngredientEnter(e, i)}
-                  className="w-full min-w-0 bg-white border border-slate-300 p-2.5 rounded-lg font-semibold text-black outline-none"
+                  className="w-full min-w-0 bg-white border border-slate-300 p-2.5 rounded-lg font-semibold text-black outline-none focus:ring-2 focus:ring-[#004225]/25 focus:border-[#004225]"
                   style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 />
                 <input
@@ -358,7 +359,7 @@ export default function SubmitOrderPage() {
                     setIngredients(next);
                   }}
                   onKeyDown={(e) => handleOrderIngredientEnter(e, i)}
-                  className="w-full bg-white border border-slate-300 p-2.5 rounded-lg text-center font-semibold text-black outline-none"
+                  className="w-full bg-white border border-slate-300 p-2.5 rounded-lg text-center font-semibold text-black outline-none focus:ring-2 focus:ring-[#004225]/25 focus:border-[#004225]"
                   style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 />
                 <input
@@ -370,7 +371,7 @@ export default function SubmitOrderPage() {
                     setIngredients(next);
                   }}
                   onKeyDown={(e) => handleOrderIngredientEnter(e, i)}
-                  className="w-full bg-white border border-slate-300 p-2.5 rounded-lg text-center font-semibold text-black outline-none"
+                  className="w-full bg-white border border-slate-300 p-2.5 rounded-lg text-center font-semibold text-black outline-none focus:ring-2 focus:ring-[#004225]/25 focus:border-[#004225]"
                   style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 />
                 <button
@@ -383,7 +384,7 @@ export default function SubmitOrderPage() {
               </div>
             ))}
             {ingredients.length === 0 && (
-              <p className="text-sm text-slate-500">No ingredients yet. Load a recipe or add manually.</p>
+              <p className="text-sm text-slate-500">No ingredients yet. Add them manually or from a recipe card.</p>
             )}
             <button
               type="button"
@@ -398,7 +399,7 @@ export default function SubmitOrderPage() {
         )}
 
         {activeTab === 'instructions' && (
-        <div>
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-700">Instructions</h2>
           </div>
@@ -415,7 +416,7 @@ export default function SubmitOrderPage() {
                   }}
                   onKeyDown={(e) => handleOrderInstructionEnter(e, i)}
                   rows={2}
-                  className="flex-1 bg-white border border-slate-300 p-2.5 rounded-lg font-medium text-black outline-none"
+                  className="flex-1 bg-white border border-slate-300 p-2.5 rounded-lg font-medium text-black outline-none focus:ring-2 focus:ring-[#004225]/25 focus:border-[#004225]"
                   style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                   placeholder={`Step ${i + 1}`}
                 />
@@ -443,29 +444,27 @@ export default function SubmitOrderPage() {
         </div>
         )}
 
-        <div className="pt-2 border-t border-slate-200">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              type="button"
-              onClick={submitOrder}
-              disabled={saving}
-              className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300"
-            >
-              {saving ? 'Submitting...' : 'Submit Current Order'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowClearConfirm(true)}
-              className="w-full sm:w-auto bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wide"
-            >
-              Clear Active Order
-            </button>
-          </div>
-          <p className="text-xs text-slate-500 mt-2">
+        <div className="pt-3 border-t border-slate-200 bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Order Status</p>
+          <p className="text-sm text-slate-600 font-medium">
             {lastUpdated ? `Last updated: ${new Date(lastUpdated).toLocaleString()}` : 'No submitted order yet.'}
           </p>
+          <p className="text-xs text-slate-500 mt-2">Use the sticky button below to submit updates to your active order.</p>
         </div>
       </section>
+
+      <div className="fixed left-0 right-0 bottom-24 sm:bottom-28 z-[75] px-4 sm:px-6 pointer-events-none">
+        <div className="max-w-3xl mx-auto bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-2xl p-3 pointer-events-auto">
+          <button
+            type="button"
+            onClick={submitOrder}
+            disabled={saving}
+            className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm"
+          >
+            {saving ? 'Submitting...' : 'Submit Current Order'}
+          </button>
+        </div>
+      </div>
 
       {showSuccess && (
         <div className="order-success-backdrop" aria-live="polite" role="status">
@@ -506,6 +505,7 @@ export default function SubmitOrderPage() {
       )}
 
       <MobileNav />
+      </div>
     </main>
   );
 }

@@ -1,40 +1,216 @@
--- Backfill canonical_name and preparation_note from existing item_name.
--- Uses deterministic string parsing (no LLM).
+-- Seed common ingredient aliases for deterministic canonical grouping.
+-- Safe to run multiple times.
 
-UPDATE public.ingredients
-SET
-  canonical_name = CASE
-    WHEN item_name IS NULL OR btrim(item_name) = '' THEN item_name
-    ELSE initcap(
-      btrim(
-        split_part(
-          regexp_replace(
-            item_name,
-            '^\s*(\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?)\s*(cups?|tablespoons?|tbsp|teaspoons?|tsp|ounces?|oz|pounds?|lbs?|lb|grams?|g|kilograms?|kg|milliliters?|ml|liters?|l|cans?|cloves?|bunch(?:es)?|pinch(?:es)?|dash(?:es)?|slices?|blocks?|stalks?)?\s*',
-            '',
-            'i'
-          ),
-          ',',
-          1
-        )
-      )
-    )
-  END,
-  preparation_note = NULLIF(
-    btrim(
-      CASE
-        WHEN strpos(item_name, ',') > 0 THEN
-          substr(item_name, strpos(item_name, ',') + 1)
-        ELSE
-          ''
-      END
-    ),
-    ''
-  )
-WHERE canonical_name IS NULL OR btrim(canonical_name) = '';
+INSERT INTO public.ingredient_aliases (raw_term, canonical_name)
+VALUES
+  -- Produce
+  ('carrots', 'Carrot'),
+  ('baby carrots', 'Carrot'),
+  ('rainbow carrots', 'Carrot'),
+  ('yellow onion', 'Onion'),
+  ('white onion', 'Onion'),
+  ('red onion', 'Onion'),
+  ('sweet onion', 'Onion'),
+  ('green onions', 'Green Onion'),
+  ('scallions', 'Green Onion'),
+  ('spring onions', 'Green Onion'),
+  ('russet potato', 'Potato'),
+  ('russet potatoes', 'Potato'),
+  ('yukon gold potato', 'Potato'),
+  ('yukon gold potatoes', 'Potato'),
+  ('red potato', 'Potato'),
+  ('red potatoes', 'Potato'),
+  ('sweet potato', 'Sweet Potato'),
+  ('sweet potatoes', 'Sweet Potato'),
+  ('bell peppers', 'Bell Pepper'),
+  ('red bell pepper', 'Bell Pepper'),
+  ('green bell pepper', 'Bell Pepper'),
+  ('yellow bell pepper', 'Bell Pepper'),
+  ('orange bell pepper', 'Bell Pepper'),
+  ('chili pepper', 'Chili Pepper'),
+  ('jalapenos', 'Jalapeno'),
+  ('jalapeno peppers', 'Jalapeno'),
+  ('serrano peppers', 'Serrano Pepper'),
+  ('roma tomatoes', 'Tomato'),
+  ('cherry tomatoes', 'Tomato'),
+  ('grape tomatoes', 'Tomato'),
+  ('heirloom tomatoes', 'Tomato'),
+  ('plum tomatoes', 'Tomato'),
+  ('cucumber', 'Cucumber'),
+  ('english cucumber', 'Cucumber'),
+  ('persian cucumber', 'Cucumber'),
+  ('zucchini', 'Zucchini'),
+  ('courgette', 'Zucchini'),
+  ('eggplant', 'Eggplant'),
+  ('aubergine', 'Eggplant'),
+  ('broccoli florets', 'Broccoli'),
+  ('cauliflower florets', 'Cauliflower'),
+  ('spinach leaves', 'Spinach'),
+  ('baby spinach', 'Spinach'),
+  ('kale leaves', 'Kale'),
+  ('lacinato kale', 'Kale'),
+  ('dinosaur kale', 'Kale'),
+  ('romaine lettuce', 'Lettuce'),
+  ('iceberg lettuce', 'Lettuce'),
+  ('mixed greens', 'Lettuce'),
+  ('mushrooms', 'Mushroom'),
+  ('cremini mushrooms', 'Mushroom'),
+  ('baby bella mushrooms', 'Mushroom'),
+  ('button mushrooms', 'Mushroom'),
+  ('portobello mushrooms', 'Mushroom'),
+  ('avocados', 'Avocado'),
+  ('lemons', 'Lemon'),
+  ('limes', 'Lime'),
+  ('garlic cloves', 'Garlic'),
+  ('garlic', 'Garlic'),
+  ('ginger root', 'Ginger'),
 
--- Apply alias overrides if there is an exact raw-term match in item_name text.
-UPDATE public.ingredients i
-SET canonical_name = a.canonical_name
-FROM public.ingredient_aliases a
-WHERE lower(i.item_name) LIKE '%' || lower(a.raw_term) || '%';
+  -- Grains and starches
+  ('rice', 'Rice'),
+  ('white rice', 'Rice'),
+  ('long-grain white rice', 'Rice'),
+  ('short-grain rice', 'Rice'),
+  ('jasmine rice', 'Rice'),
+  ('basmati rice', 'Rice'),
+  ('brown rice', 'Rice'),
+  ('wild rice', 'Rice'),
+  ('arborio rice', 'Rice'),
+  ('sushi rice', 'Rice'),
+  ('quinoa', 'Quinoa'),
+  ('couscous', 'Couscous'),
+  ('farro', 'Farro'),
+  ('barley', 'Barley'),
+  ('rolled oats', 'Oats'),
+  ('old-fashioned oats', 'Oats'),
+  ('steel-cut oats', 'Oats'),
+  ('spaghetti', 'Pasta'),
+  ('penne', 'Pasta'),
+  ('rigatoni', 'Pasta'),
+  ('fusilli', 'Pasta'),
+  ('macaroni', 'Pasta'),
+  ('egg noodles', 'Noodles'),
+  ('rice noodles', 'Noodles'),
+  ('udon noodles', 'Noodles'),
+  ('ramen noodles', 'Noodles'),
+  ('bread crumbs', 'Breadcrumbs'),
+  ('panko breadcrumbs', 'Breadcrumbs'),
+
+  -- Beans and legumes
+  ('chickpeas', 'Chickpea'),
+  ('garbanzo beans', 'Chickpea'),
+  ('black beans', 'Black Bean'),
+  ('pinto beans', 'Pinto Bean'),
+  ('kidney beans', 'Kidney Bean'),
+  ('cannellini beans', 'Cannellini Bean'),
+  ('navy beans', 'Navy Bean'),
+  ('lentils', 'Lentil'),
+  ('red lentils', 'Lentil'),
+  ('green lentils', 'Lentil'),
+
+  -- Proteins
+  ('chicken breast', 'Chicken'),
+  ('chicken breasts', 'Chicken'),
+  ('chicken thighs', 'Chicken'),
+  ('chicken drumsticks', 'Chicken'),
+  ('ground chicken', 'Chicken'),
+  ('turkey breast', 'Turkey'),
+  ('ground turkey', 'Turkey'),
+  ('ground beef', 'Beef'),
+  ('beef chuck', 'Beef'),
+  ('beef sirloin', 'Beef'),
+  ('pork loin', 'Pork'),
+  ('pork chops', 'Pork'),
+  ('ground pork', 'Pork'),
+  ('bacon', 'Bacon'),
+  ('salmon fillet', 'Salmon'),
+  ('salmon fillets', 'Salmon'),
+  ('shrimp', 'Shrimp'),
+  ('cod fillet', 'Cod'),
+  ('tuna steak', 'Tuna'),
+  ('extra-firm tofu', 'Tofu'),
+  ('firm tofu', 'Tofu'),
+  ('silken tofu', 'Tofu'),
+  ('tempeh', 'Tempeh'),
+
+  -- Dairy and eggs
+  ('eggs', 'Egg'),
+  ('egg whites', 'Egg White'),
+  ('whole milk', 'Milk'),
+  ('2% milk', 'Milk'),
+  ('skim milk', 'Milk'),
+  ('almond milk', 'Milk'),
+  ('oat milk', 'Milk'),
+  ('soy milk', 'Milk'),
+  ('heavy cream', 'Cream'),
+  ('half and half', 'Cream'),
+  ('sour cream', 'Sour Cream'),
+  ('greek yogurt', 'Yogurt'),
+  ('plain yogurt', 'Yogurt'),
+  ('cheddar cheese', 'Cheese'),
+  ('mozzarella cheese', 'Cheese'),
+  ('parmesan cheese', 'Cheese'),
+  ('feta cheese', 'Cheese'),
+  ('goat cheese', 'Cheese'),
+  ('cream cheese', 'Cream Cheese'),
+  ('unsalted butter', 'Butter'),
+  ('salted butter', 'Butter'),
+
+  -- Oils, acids, condiments
+  ('olive oil', 'Olive Oil'),
+  ('extra virgin olive oil', 'Olive Oil'),
+  ('avocado oil', 'Avocado Oil'),
+  ('vegetable oil', 'Vegetable Oil'),
+  ('canola oil', 'Canola Oil'),
+  ('sesame oil', 'Sesame Oil'),
+  ('apple cider vinegar', 'Vinegar'),
+  ('white vinegar', 'Vinegar'),
+  ('red wine vinegar', 'Vinegar'),
+  ('balsamic vinegar', 'Vinegar'),
+  ('soy sauce', 'Soy Sauce'),
+  ('tamari', 'Soy Sauce'),
+  ('fish sauce', 'Fish Sauce'),
+  ('hot sauce', 'Hot Sauce'),
+  ('dijon mustard', 'Mustard'),
+  ('yellow mustard', 'Mustard'),
+  ('mayonnaise', 'Mayonnaise'),
+  ('ketchup', 'Ketchup'),
+
+  -- Sweeteners and baking
+  ('granulated sugar', 'Sugar'),
+  ('brown sugar', 'Sugar'),
+  ('powdered sugar', 'Sugar'),
+  ('honey', 'Honey'),
+  ('maple syrup', 'Maple Syrup'),
+  ('all-purpose flour', 'Flour'),
+  ('whole wheat flour', 'Flour'),
+  ('bread flour', 'Flour'),
+  ('baking powder', 'Baking Powder'),
+  ('baking soda', 'Baking Soda'),
+  ('cornstarch', 'Cornstarch'),
+  ('vanilla extract', 'Vanilla Extract'),
+
+  -- Herbs and spices
+  ('kosher salt', 'Salt'),
+  ('sea salt', 'Salt'),
+  ('table salt', 'Salt'),
+  ('black pepper', 'Black Pepper'),
+  ('ground black pepper', 'Black Pepper'),
+  ('crushed red pepper flakes', 'Red Pepper Flakes'),
+  ('paprika', 'Paprika'),
+  ('smoked paprika', 'Paprika'),
+  ('cumin', 'Cumin'),
+  ('ground cumin', 'Cumin'),
+  ('chili powder', 'Chili Powder'),
+  ('cinnamon', 'Cinnamon'),
+  ('ground cinnamon', 'Cinnamon'),
+  ('oregano', 'Oregano'),
+  ('dried oregano', 'Oregano'),
+  ('thyme', 'Thyme'),
+  ('dried thyme', 'Thyme'),
+  ('rosemary', 'Rosemary'),
+  ('basil', 'Basil'),
+  ('fresh basil', 'Basil'),
+  ('parsley', 'Parsley'),
+  ('cilantro', 'Cilantro'),
+  ('bay leaves', 'Bay Leaf')
+ON CONFLICT (raw_term) DO NOTHING;

@@ -312,26 +312,35 @@ export default function RecipeDetail() {
           )}
         </header>
 
+        {isEditing && (
+          <div className="sticky top-4 z-40 mb-6 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl p-3 shadow-sm">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Editing Recipe</p>
+              <p className="text-xs text-slate-400">Save before leaving this page</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={saveChanges}
+                className="w-full sm:w-auto bg-[#004225] text-white px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide"
+              >
+                Save Changes
+              </button>
+              <button
+                type="button"
+                onClick={cancelEditing}
+                className="w-full sm:w-auto bg-white border border-slate-300 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wide"
+              >
+                {recipe?.title === 'New Recipe' ? 'Cancel Draft' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Description Section */}
         <section className="bg-slate-100 rounded-3xl p-6 mb-12 border border-slate-200">
           {isEditing ? (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  type="button"
-                  onClick={saveChanges}
-                  className="w-full sm:w-auto bg-[#004225] text-white px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide"
-                >
-                  Save Changes
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelEditing}
-                  className="w-full sm:w-auto bg-white border border-slate-300 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wide"
-                >
-                  {recipe?.title === 'New Recipe' ? 'Cancel Draft' : 'Cancel'}
-                </button>
-              </div>
               <textarea 
                 value={description} 
                 onChange={e => setDescription(e.target.value)} 
@@ -404,13 +413,20 @@ export default function RecipeDetail() {
             </div>
           ) : (
             <>
-              <div className="mb-5">
+              <div className="mb-5 flex flex-col sm:flex-row gap-2">
                 <button
                   type="button"
                   onClick={openPlanPicker}
                   className="w-full sm:w-auto bg-[#004225] text-white px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide hover:bg-[#003319] transition-colors"
                 >
                   + Add to Plan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = `/submit-order?recipeId=${params.id}&autoload=1`; }}
+                  className="w-full sm:w-auto bg-emerald-100 text-emerald-800 px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide hover:bg-emerald-200 transition-colors"
+                >
+                  Order
                 </button>
               </div>
 
