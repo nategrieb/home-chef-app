@@ -164,8 +164,15 @@ export default function MealPlan() {
               </div>
 
               <div className="space-y-3 mb-4">
-                {getMealsForDay(index).map((meal) => (
-                  <div key={meal.id} className="group relative bg-gradient-to-br from-white to-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+                {getMealsForDay(index).map((meal, mealIndex) => (
+                  <div
+                    key={meal.id}
+                    className="group relative bg-gradient-to-br from-white to-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden animate-in slide-in-from-bottom-2 fade-in"
+                    style={{
+                      animationDelay: `${mealIndex * 50}ms`,
+                      animationFillMode: 'both'
+                    }}
+                  >
                     <Link href={`/recipes/${meal.recipe?.id}`} className="block p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
@@ -182,9 +189,16 @@ export default function MealPlan() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            removeMealFromPlan(meal.id);
+                            // Add slide-out animation before removing
+                            const card = e.currentTarget.closest('.group');
+                            if (card) {
+                              card.classList.add('animate-out', 'slide-out-to-left', 'fade-out');
+                              setTimeout(() => removeMealFromPlan(meal.id), 200);
+                            } else {
+                              removeMealFromPlan(meal.id);
+                            }
                           }}
-                          className="ml-3 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100"
+                          className="ml-3 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 rounded-lg transition-all duration-200 opacity-100 md:opacity-0 md:group-hover:opacity-100 touch-manipulation"
                           aria-label="Remove meal"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
