@@ -52,26 +52,30 @@ export default function RecipeDetail() {
   const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [showManageActions, setShowManageActions] = useState(false);
 
+  const hydrateForm = (data: any) => {
+    setTitle(data.title || '');
+    setDescription(data.description || '');
+    setSourceUrl(data.source_url || '');
+    setCategory(data.category || '');
+    if (Array.isArray(data.dietary_preference)) {
+      setDietaryPreference(data.dietary_preference as DietOption[]);
+    } else if (data.dietary_preference) {
+      setDietaryPreference([data.dietary_preference as DietOption]);
+    } else {
+      setDietaryPreference([]);
+    }
+    setTotalTime(data.total_time || '');
+    setTags(data.tags || []);
+    setIngredients(data.ingredients || []);
+    setInstructions(data.instructions || []);
+  };
+
   useEffect(() => {
     async function fetchRecipe() {
       const { data } = await supabase.from('recipes').select(`*, ingredients (*)`).eq('id', params.id).single();
       if (data) {
         setRecipe(data);
-        setTitle(data.title || '');
-        setDescription(data.description || '');
-        setSourceUrl(data.source_url || '');
-        setCategory(data.category || '');
-        if (Array.isArray(data.dietary_preference)) {
-          setDietaryPreference(data.dietary_preference as DietOption[]);
-        } else if (data.dietary_preference) {
-          setDietaryPreference([data.dietary_preference as DietOption]);
-        } else {
-          setDietaryPreference([]);
-        }
-        setTotalTime(data.total_time || '');
-        setTags(data.tags || []);
-        setIngredients(data.ingredients || []);
-        setInstructions(data.instructions || []);
+        hydrateForm(data);
 
         // Auto-start editing for new recipes or when edit=true is in URL
         const shouldEdit = searchParams.get('edit') === 'true' || data.title === 'New Recipe';
@@ -192,47 +196,40 @@ export default function RecipeDetail() {
     window.location.href = '/';
   };
 
+  const deleteDraftRecipe = async () => {
+    if (!confirm('Cancel creating this recipe? This will permanently delete the draft.')) return;
+
+    try {
+      await supabase.from('ingredients').delete().eq('recipe_id', params.id);
+      await supabase.from('recipes').delete().eq('id', params.id);
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error deleting draft recipe:', error);
+      alert('Error deleting draft. Please try again.');
+    }
+  };
+
+  const startEditing = () => {
+    setShowManageActions(false);
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    if (recipe?.title === 'New Recipe') {
+      void deleteDraftRecipe();
+      return;
+    }
+
+    if (recipe) {
+      hydrateForm(recipe);
+    }
+    setIsEditing(false);
+  };
+
   if (loading || !recipe) return <div className="p-20 text-center text-slate-900 font-bold">Loading...</div>;
 
   return (
     <main className="min-h-screen bg-white pb-40">
-      {/* Floating Action Button for Edit/Save */}
-      <div className="fixed bottom-24 right-6 z-50">
-        <button 
-          onClick={() => isEditing ? saveChanges() : setIsEditing(true)} 
-          className="bg-[#004225] text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center font-black text-lg active:scale-95 transition-all hover:bg-[#003319]"
-        >
-          {isEditing ? "✓" : "✎"}
-        </button>
-      </div>
-
-      {/* Cancel Button for New Recipes */}
-      {isEditing && recipe?.title === 'New Recipe' && (
-        <div className="fixed bottom-24 left-6 z-50">
-          <button 
-            onClick={async () => {
-              if (confirm('Cancel creating this recipe? This will permanently delete the draft.')) {
-                try {
-                  // Delete ingredients first
-                  await supabase.from('ingredients').delete().eq('recipe_id', params.id);
-                  // Then delete the recipe
-                  await supabase.from('recipes').delete().eq('id', params.id);
-                  // Navigate back to home
-                  window.location.href = '/';
-                } catch (error) {
-                  console.error('Error deleting draft recipe:', error);
-                  alert('Error deleting draft. Please try again.');
-                }
-              }
-            }} 
-            className="bg-red-500 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center font-black text-lg active:scale-95 transition-all hover:bg-red-600"
-            title="Cancel and Delete Draft"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
       <div className="max-w-2xl mx-auto px-6 pt-10">
         <header className="mb-8">
           {isEditing ? (
@@ -251,6 +248,22 @@ export default function RecipeDetail() {
         <section className="bg-slate-100 rounded-3xl p-6 mb-12 border border-slate-200">
           {isEditing ? (
             <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={saveChanges}
+                  className="w-full sm:w-auto bg-[#004225] text-white px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEditing}
+                  className="w-full sm:w-auto bg-white border border-slate-300 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wide"
+                >
+                  {recipe?.title === 'New Recipe' ? 'Cancel Draft' : 'Cancel'}
+                </button>
+              </div>
               <textarea 
                 value={description} 
                 onChange={e => setDescription(e.target.value)} 
@@ -381,6 +394,15 @@ export default function RecipeDetail() {
                 </button>
                 {showManageActions && (
                   <div className="mt-2 pt-3 border-t border-slate-200">
+                    <div className="mb-3">
+                      <button
+                        type="button"
+                        onClick={startEditing}
+                        className="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors"
+                      >
+                        Edit Recipe
+                      </button>
+                    </div>
                     <button
                       type="button"
                       onClick={deleteRecipeRecord}
