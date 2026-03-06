@@ -29,6 +29,7 @@ export default function SubmitOrderPage() {
   const [feedback, setFeedback] = useState<{ type: 'error' | 'info'; message: string } | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'ingredients' | 'instructions'>('ingredients');
 
   useEffect(() => {
     async function loadData() {
@@ -101,6 +102,40 @@ export default function SubmitOrderPage() {
     }
 
     focusOrderIngredientName(index + 1);
+  };
+
+  const focusOrderInstruction = (index: number) => {
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById(`order-instruction-${index}`) as HTMLTextAreaElement | null;
+      input?.focus();
+    });
+  };
+
+  const appendOrderInstruction = (focusNewRow = false) => {
+    let nextIndex = 0;
+    setInstructions((prev) => {
+      nextIndex = prev.length;
+      return [...prev, ''];
+    });
+
+    if (focusNewRow) {
+      window.setTimeout(() => focusOrderInstruction(nextIndex), 0);
+    }
+  };
+
+  const handleOrderInstructionEnter = (
+    event: KeyboardEvent<HTMLTextAreaElement>,
+    index: number
+  ) => {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    event.preventDefault();
+
+    if (index === instructions.length - 1) {
+      appendOrderInstruction(true);
+      return;
+    }
+
+    focusOrderInstruction(index + 1);
   };
 
   async function loadFromRecipe() {
@@ -268,6 +303,32 @@ export default function SubmitOrderPage() {
           style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
         />
 
+        <div className="flex bg-slate-100 rounded-2xl p-1 border border-slate-200">
+          <button
+            type="button"
+            onClick={() => setActiveTab('ingredients')}
+            className={`flex-1 py-3 px-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${
+              activeTab === 'ingredients'
+                ? 'bg-[#004225] text-white shadow-lg'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            🥕 Ingredients
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('instructions')}
+            className={`flex-1 py-3 px-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${
+              activeTab === 'instructions'
+                ? 'bg-[#004225] text-white shadow-lg'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            👨‍🍳 Instructions
+          </button>
+        </div>
+
+        {activeTab === 'ingredients' && (
         <div>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-700">Ingredients</h2>
@@ -334,28 +395,25 @@ export default function SubmitOrderPage() {
             <p className="text-xs text-slate-500">Press Return in any ingredient field to jump to the next line.</p>
           </div>
         </div>
+        )}
 
+        {activeTab === 'instructions' && (
         <div>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-black uppercase tracking-wider text-slate-700">Instructions</h2>
-            <button
-              type="button"
-              onClick={() => setInstructions((prev) => [...prev, ''])}
-              className="text-xs font-black uppercase tracking-wide text-[#004225]"
-            >
-              + Add
-            </button>
           </div>
           <div className="space-y-2">
             {instructions.map((step, i) => (
               <div key={i} className="flex gap-2">
                 <textarea
+                  id={`order-instruction-${i}`}
                   value={step}
                   onChange={(e) => {
                     const next = [...instructions];
                     next[i] = e.target.value;
                     setInstructions(next);
                   }}
+                  onKeyDown={(e) => handleOrderInstructionEnter(e, i)}
                   rows={2}
                   className="flex-1 bg-white border border-slate-300 p-2.5 rounded-lg font-medium text-black outline-none"
                   style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
@@ -373,8 +431,17 @@ export default function SubmitOrderPage() {
             {instructions.length === 0 && (
               <p className="text-sm text-slate-500">No instructions yet. Add custom prep steps.</p>
             )}
+            <button
+              type="button"
+              onClick={() => appendOrderInstruction(true)}
+              className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-3 rounded-xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors"
+            >
+              + Add Step
+            </button>
+            <p className="text-xs text-slate-500">Press Return to move to the next step. Use Shift+Return for a line break.</p>
           </div>
         </div>
+        )}
 
         <div className="pt-2 border-t border-slate-200">
           <div className="flex flex-col sm:flex-row gap-2">

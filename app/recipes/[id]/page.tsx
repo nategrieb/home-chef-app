@@ -192,6 +192,40 @@ export default function RecipeDetail() {
     focusRecipeIngredientName(index + 1);
   };
 
+  const focusRecipeInstruction = (index: number) => {
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById(`recipe-instruction-${index}`) as HTMLTextAreaElement | null;
+      input?.focus();
+    });
+  };
+
+  const appendRecipeInstruction = (focusNewRow = false) => {
+    let nextIndex = 0;
+    setInstructions((prev) => {
+      nextIndex = prev.length;
+      return [...prev, ''];
+    });
+
+    if (focusNewRow) {
+      window.setTimeout(() => focusRecipeInstruction(nextIndex), 0);
+    }
+  };
+
+  const handleRecipeInstructionEnter = (
+    event: KeyboardEvent<HTMLTextAreaElement>,
+    index: number
+  ) => {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    event.preventDefault();
+
+    if (index === instructions.length - 1) {
+      appendRecipeInstruction(true);
+      return;
+    }
+
+    focusRecipeInstruction(index + 1);
+  };
+
   const addToPlan = async () => {
     const { error } = await supabase
       .from('meal_plans')
@@ -558,8 +592,10 @@ export default function RecipeDetail() {
                 {isEditing ? (
                   <div className="w-full relative">
                     <textarea 
+                      id={`recipe-instruction-${i}`}
                       value={step} 
                       onChange={e => { const n = [...instructions]; n[i] = e.target.value; setInstructions(n); }} 
+                      onKeyDown={(e) => handleRecipeInstructionEnter(e, i)}
                       className="w-full bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300 resize-none" 
                       style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                       rows={3}
@@ -572,7 +608,10 @@ export default function RecipeDetail() {
               </div>
             ))}
             {isEditing && (
-              <button onClick={() => setInstructions([...instructions, ''])} className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors">+ Add Step</button>
+              <>
+                <button onClick={() => appendRecipeInstruction(true)} className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors">+ Add Step</button>
+                <p className="text-xs text-slate-500">Press Return to move to the next step. Use Shift+Return for a line break.</p>
+              </>
             )}
           </div>
         </section>
