@@ -12,6 +12,14 @@
             "approve": true,
             "matchCommandLine": true
         },
-        "pkill": true
+        "pkill": true,
+        "/^node debug-dates\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node check-db\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

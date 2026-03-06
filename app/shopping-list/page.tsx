@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
-import { startOfWeek, addDays, format } from 'date-fns';
+import { startOfWeek, format } from 'date-fns';
 
 interface Ingredient {
   item_name: string;
@@ -22,7 +22,7 @@ interface AggregatedIngredient {
 interface MealPlan {
   id: string;
   recipe_id: string;
-  planned_date: string;
+  day_of_week: number;
   recipe?: {
     id: string;
     title: string;
@@ -35,8 +35,9 @@ export default function ShoppingList() {
   const [aggregatedIngredients, setAggregatedIngredients] = useState<AggregatedIngredient[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Get the current week
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  // Get the current week starting from Monday (local dates)
+  const today = new Date();
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
 
   async function fetchMealPlans() {
     const { data, error } = await supabase
@@ -49,9 +50,7 @@ export default function ShoppingList() {
           ingredients (*)
         )
       `)
-      .gte('planned_date', weekStart.toISOString().split('T')[0])
-      .lt('planned_date', addDays(weekStart, 7).toISOString().split('T')[0])
-      .order('planned_date');
+      .order('day_of_week');
 
     if (error) {
       console.error("Error fetching meal plans:", error);
@@ -61,7 +60,7 @@ export default function ShoppingList() {
     setLoading(false);
   }
 
-  function aggregateIngredients() {
+  const aggregateIngredients = useCallback(() => {
     const ingredientMap = new Map<string, AggregatedIngredient>();
 
     mealPlans.forEach((meal) => {
@@ -96,7 +95,7 @@ export default function ShoppingList() {
     );
 
     setAggregatedIngredients(sortedIngredients);
-  }
+  }, [mealPlans]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -110,17 +109,19 @@ export default function ShoppingList() {
     } else {
       setAggregatedIngredients([]);
     }
-  }, [mealPlans]);
+  }, [mealPlans, aggregateIngredients]);
 
-  // Group meals by date
-  const mealsByDate = mealPlans.reduce((acc, meal) => {
-    const date = meal.planned_date;
-    if (!acc[date]) {
-      acc[date] = [];
+  // Group meals by day of week
+  const mealsByDay = mealPlans.reduce((acc, meal) => {
+    const dayIndex = meal.day_of_week;
+    if (!acc[dayIndex]) {
+      acc[dayIndex] = [];
     }
-    acc[date].push(meal);
+    acc[dayIndex].push(meal);
     return acc;
-  }, {} as Record<string, MealPlan[]>);
+  }, {} as Record<number, MealPlan[]>);
+
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   if (loading) {
     return (
@@ -192,11 +193,11 @@ export default function ShoppingList() {
                 Planned Meals
               </h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(mealsByDate).map(([date, meals]) => (
-                  <div key={date} className="bg-slate-50 rounded-lg p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(mealsByDay).map(([dayIndex, meals]) => (
+                  <div key={dayIndex} className="bg-slate-50 rounded-lg p-4">
                     <h3 className="font-medium text-slate-900 mb-2">
-                      {format(new Date(date), 'EEEE, MMM d')}
+                      {dayNames[parseInt(dayIndex)]}
                     </h3>
                     <div className="space-y-1">
                       {meals.map((meal) => (

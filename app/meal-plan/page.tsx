@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
-import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
+import { format, startOfWeek } from 'date-fns';
 
 interface Recipe {
   id: string;
@@ -14,7 +14,7 @@ interface Recipe {
 interface MealPlan {
   id: string;
   recipe_id: string;
-  planned_date: string;
+  day_of_week: number;
   recipe?: Recipe;
 }
 
@@ -25,9 +25,15 @@ export default function MealPlan() {
   const [selectedRecipe, setSelectedRecipe] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('');
 
-  // Get the current week starting from Monday
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Get the current week starting from Monday (local dates)
+  const today = new Date();
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  // Create local dates without timezone issues
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + i);
+    return date;
+  });
 
   async function fetchMealPlans() {
     const { data, error } = await supabase
@@ -36,8 +42,7 @@ export default function MealPlan() {
         *,
         recipes (*)
       `)
-      .gte('planned_date', weekStart.toISOString().split('T')[0])
-      .lt('planned_date', addDays(weekStart, 7).toISOString().split('T')[0]);
+      .order('day_of_week');
 
     if (error) {
       console.error("Error fetching meal plans:", error);
@@ -66,14 +71,12 @@ export default function MealPlan() {
     fetchRecipes();
   }, []);
 
-  async function addMealToPlan(recipeId: string, date: Date) {
-    const dateStr = format(date, 'yyyy-MM-dd');
-
+  async function addMealToPlan(recipeId: string, dayIndex: number) {
     const { error } = await supabase
       .from('meal_plans')
       .insert([{
         recipe_id: recipeId,
-        planned_date: dateStr
+        day_of_week: dayIndex
       }]);
 
     if (error) {
@@ -100,10 +103,8 @@ export default function MealPlan() {
     }
   }
 
-  const getMealsForDate = (date: Date) => {
-    return mealPlans.filter(plan =>
-      isSameDay(new Date(plan.planned_date), date)
-    );
+  const getMealsForDay = (dayIndex: number) => {
+    return mealPlans.filter(plan => plan.day_of_week === dayIndex);
   };
 
   if (loading) {
@@ -148,8 +149,8 @@ export default function MealPlan() {
           </div>
         </div>
 
-        {/* Weekly Calendar */}
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-6 mb-8">
+        {/* Weekly Calendar - Mobile Optimized */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4 sm:gap-6 mb-8">
           {weekDays.map((day, index) => (
             <div key={index} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
               <div className="text-center mb-4">
@@ -162,7 +163,7 @@ export default function MealPlan() {
               </div>
 
               <div className="space-y-3 mb-4">
-                {getMealsForDate(day).map((meal) => (
+                {getMealsForDay(index).map((meal) => (
                   <div key={meal.id} className="group relative bg-slate-50 rounded-lg p-3">
                     <div className="flex justify-between items-start">
                       <div className="flex-1 min-w-0">
@@ -189,7 +190,7 @@ export default function MealPlan() {
 
               <button
                 onClick={() => {
-                  setSelectedDate(format(day, 'yyyy-MM-dd'));
+                  setSelectedDate(`${index}`);
                 }}
                 className="w-full py-2 px-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200 border border-dashed border-slate-300 hover:border-slate-400"
               >
@@ -204,7 +205,7 @@ export default function MealPlan() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-md w-full p-6">
               <h3 className="text-lg font-medium text-slate-900 mb-4">
-                Add Meal for {format(new Date(selectedDate), 'EEEE, MMM d')}
+                Add Meal for {format(weekDays[parseInt(selectedDate)], 'EEEE, MMM d')}
               </h3>
 
               <div className="space-y-4">
@@ -230,7 +231,7 @@ export default function MealPlan() {
                   <button
                     onClick={() => {
                       if (selectedRecipe) {
-                        addMealToPlan(selectedRecipe, new Date(selectedDate));
+                        addMealToPlan(selectedRecipe, parseInt(selectedDate));
                       }
                     }}
                     disabled={!selectedRecipe}

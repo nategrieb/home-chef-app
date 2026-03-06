@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { format, startOfWeek } from 'date-fns';
 
 interface Ingredient {
   item_name: string;
@@ -37,9 +37,15 @@ export default function RecipeDetail() {
   const [servingUnit, setServingUnit] = useState<string>('servings');
   const [ingredients, setIngredients] = useState([{ item_name: '', amount: 0, unit: 'g' }]);
 
-  // Get the current week starting from Monday
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  // Get the current week starting from Monday (local dates)
+  const today = new Date();
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  // Create local dates without timezone issues
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + i);
+    return date;
+  });
 
   const servingUnits = [
     'servings',
@@ -151,22 +157,22 @@ export default function RecipeDetail() {
     setIsEditing(false);
   };
 
-  const addToMealPlan = async (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
+  const addToMealPlan = async (dayIndex: number) => {
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     try {
       const { error } = await supabase
         .from('meal_plans')
         .insert([{
           recipe_id: recipeId,
-          planned_date: dateStr
+          day_of_week: dayIndex
         }]);
 
       if (error) {
         console.error("Error adding to meal plan:", error);
         alert("Error adding recipe to meal plan. Please make sure the meal_plans table exists in your database.");
       } else {
-        alert(`Recipe added to meal plan for ${format(date, 'EEEE, MMM d')}!`);
+        alert(`Recipe added to meal plan for ${dayNames[dayIndex]}!`);
         setShowMealPlanModal(false);
         setSelectedDate('');
       }
@@ -473,62 +479,64 @@ export default function RecipeDetail() {
         <div className="h-8"></div>
       </div>
 
-      {/* Meal Plan Modal */}
+      {/* Meal Plan Modal - Mobile Optimized */}
       {showMealPlanModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-slate-900 mb-4">
-              Add "{recipe?.title}" to Meal Plan
-            </h3>
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
+              <h3 className="text-lg font-medium text-slate-900 mb-4">
+                Add &ldquo;{recipe?.title}&rdquo; to Meal Plan
+              </h3>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Select a day this week
-                </label>
-                <div className="grid grid-cols-1 gap-2">
-                  {weekDays.map((day, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedDate(format(day, 'yyyy-MM-dd'))}
-                      className={`p-3 text-left rounded-lg border transition-all duration-200 ${
-                        selectedDate === format(day, 'yyyy-MM-dd')
-                          ? 'border-slate-500 bg-slate-50'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="font-medium text-slate-900">
-                        {format(day, 'EEEE')}
-                      </div>
-                      <div className="text-sm text-slate-500">
-                        {format(day, 'MMM d, yyyy')}
-                      </div>
-                    </button>
-                  ))}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Select a day this week
+                  </label>
+                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                    {weekDays.map((day, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedDate(`${index}`)}
+                        className={`p-3 text-left rounded-lg border transition-all duration-200 ${
+                          selectedDate === `${index}`
+                            ? 'border-slate-500 bg-slate-50'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="font-medium text-slate-900">
+                          {format(day, 'EEEE')}
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          {format(day, 'MMM d, yyyy')}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => {
-                    if (selectedDate) {
-                      addToMealPlan(new Date(selectedDate));
-                    }
-                  }}
-                  disabled={!selectedDate}
-                  className="flex-1 bg-slate-900 text-white py-2 px-4 font-medium rounded-lg hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-200"
-                >
-                  Add to Plan
-                </button>
-                <button
-                  onClick={() => {
-                    setShowMealPlanModal(false);
-                    setSelectedDate('');
-                  }}
-                  className="flex-1 bg-white text-slate-700 py-2 px-4 font-medium rounded-lg border border-slate-300 hover:bg-slate-50 transition-all duration-200"
-                >
-                  Cancel
-                </button>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      if (selectedDate) {
+                        addToMealPlan(parseInt(selectedDate));
+                      }
+                    }}
+                    disabled={!selectedDate}
+                    className="flex-1 bg-slate-900 text-white py-3 px-4 font-medium rounded-lg hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    Add to Plan
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMealPlanModal(false);
+                      setSelectedDate('');
+                    }}
+                    className="flex-1 bg-white text-slate-700 py-3 px-4 font-medium rounded-lg border border-slate-300 hover:bg-slate-50 transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
