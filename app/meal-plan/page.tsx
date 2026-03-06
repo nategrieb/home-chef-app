@@ -33,7 +33,38 @@ export default function MealPlan() {
   async function addMealToPlan(recipeId: string, dayIndex: number) {
     if (!recipeId) return;
     const { error } = await supabase.from('meal_plans').insert([{ recipe_id: recipeId, day_of_week: dayIndex }]);
-    if (!error) { fetchData(); setSelectedDate(''); setSelectedRecipe(''); }
+    if (!error) {
+      // Mark ingredients for the newly-added recipe as unchecked so shopping list stays state-aware.
+      const { data: recipeIngredients } = await supabase
+        .from('ingredients')
+        .select('item_name')
+        .eq('recipe_id', recipeId);
+
+      const ingredientNames = Array.from(
+        new Set(
+          (recipeIngredients || [])
+            .map((row: { item_name: string }) => row.item_name?.trim().toLowerCase())
+            .filter(Boolean)
+        )
+      );
+
+      if (ingredientNames.length > 0) {
+        await supabase
+          .from('shopping_list_state')
+          .upsert(
+            ingredientNames.map((itemName) => ({
+              item_name: itemName,
+              is_checked: false,
+              updated_at: new Date().toISOString(),
+            })),
+            { onConflict: 'item_name' }
+          );
+      }
+
+      fetchData();
+      setSelectedDate('');
+      setSelectedRecipe('');
+    }
   }
 
   async function removeMealFromPlan(mealPlanId: string) {

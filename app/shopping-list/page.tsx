@@ -8,6 +8,7 @@ import MobileNav from '../../components/MobileNav';
 export default function ShoppingList() {
   const [mealPlans, setMealPlans] = useState<any[]>([]);
   const [aggregatedIngredients, setAggregatedIngredients] = useState<any[]>([]);
+  const [shoppingState, setShoppingState] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   // Set the week start for reference labels
@@ -20,7 +21,20 @@ export default function ShoppingList() {
       .order('day_of_week');
     
     if (data) setMealPlans(data);
-    setLoading(false);
+  }
+
+  async function fetchShoppingState() {
+    const { data } = await supabase
+      .from('shopping_list_state')
+      .select('item_name, is_checked');
+
+    if (!data) return;
+
+    const stateMap: Record<string, boolean> = {};
+    data.forEach((row: { item_name: string; is_checked: boolean }) => {
+      stateMap[row.item_name.trim().toLowerCase()] = row.is_checked;
+    });
+    setShoppingState(stateMap);
   }
 
   const aggregateIngredients = useCallback(() => {
@@ -55,7 +69,33 @@ export default function ShoppingList() {
     );
   }, [mealPlans]);
 
-  useEffect(() => { fetchMealPlans(); }, []);
+  async function loadShoppingPageData() {
+    await Promise.all([fetchMealPlans(), fetchShoppingState()]);
+    setLoading(false);
+  }
+
+  async function toggleItem(itemName: string, currentState: boolean) {
+    const normalized = itemName.trim().toLowerCase();
+    const { error } = await supabase
+      .from('shopping_list_state')
+      .upsert(
+        {
+          item_name: normalized,
+          is_checked: !currentState,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'item_name' }
+      );
+
+    if (!error) {
+      setShoppingState((prev) => ({
+        ...prev,
+        [normalized]: !currentState,
+      }));
+    }
+  }
+
+  useEffect(() => { loadShoppingPageData(); }, []);
   useEffect(() => { aggregateIngredients(); }, [mealPlans, aggregateIngredients]);
 
   if (loading) return (
@@ -84,24 +124,33 @@ export default function ShoppingList() {
                 key={i} 
                 className="flex items-center justify-between p-5 bg-slate-50 rounded-3xl border border-slate-100 active:bg-slate-100 transition-all cursor-pointer group"
               >
+                {(() => {
+                  const isChecked = shoppingState[item.item_name.trim().toLowerCase()] || false;
+                  return (
+                    <>
                 <div className="flex items-center gap-4">
                   {/* British Racing Green Checkbox */}
                   <input 
                     type="checkbox" 
+                    checked={isChecked}
+                    onChange={() => toggleItem(item.item_name, isChecked)}
                     className="w-6 h-6 rounded-full border-2 border-slate-300 appearance-none checked:bg-[#004225] checked:border-[#004225] transition-all shrink-0" 
                   />
                   <div>
-                    <span className="font-bold text-slate-900 text-lg block group-has-[:checked]:text-slate-300 group-has-[:checked]:line-through capitalize leading-tight">
+                    <span className={`font-bold text-lg block capitalize leading-tight ${isChecked ? 'text-slate-300 line-through' : 'text-slate-900'}`}>
                       {item.item_name}
                     </span>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight group-has-[:checked]:text-slate-200">
+                    <span className={`text-[10px] font-black uppercase tracking-tight ${isChecked ? 'text-slate-200' : 'text-slate-400'}`}>
                       {item.recipeTitles.join(' • ')}
                     </span>
                   </div>
                 </div>
-                <span className="text-slate-900 font-black text-sm group-has-[:checked]:text-slate-200 shrink-0">
+                <span className={`font-black text-sm shrink-0 ${isChecked ? 'text-slate-200' : 'text-slate-900'}`}>
                   {item.total_amount} {item.unit}
                 </span>
+                    </>
+                  );
+                })()}
               </label>
             ))}
           </div>
