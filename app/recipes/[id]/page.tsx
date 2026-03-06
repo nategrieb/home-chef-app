@@ -16,6 +16,10 @@ export default function RecipeDetail() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
+  const [category, setCategory] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | ''>('');
+  const [dietaryPreference, setDietaryPreference] = useState<'Vegan' | 'Vegetarian' | 'Gluten-Free' | 'Pescetarian' | 'Dairy-Free' | 'Nut-Free' | 'Keto' | 'Paleo' | 'Low-Carb' | ''>('');
+  const [totalTime, setTotalTime] = useState<number | ''>('');
+  const [tags, setTags] = useState<string[]>([]);
   const [ingredients, setIngredients] = useState<any[]>([]);
   const [instructions, setInstructions] = useState<string[]>([]);
 
@@ -27,6 +31,10 @@ export default function RecipeDetail() {
         setTitle(data.title || '');
         setDescription(data.description || '');
         setSourceUrl(data.source_url || '');
+        setCategory(data.category || '');
+        setDietaryPreference(data.dietary_preference || '');
+        setTotalTime(data.total_time || '');
+        setTags(data.tags || []);
         setIngredients(data.ingredients || []);
         setInstructions(data.instructions || []);
 
@@ -54,7 +62,16 @@ export default function RecipeDetail() {
 
     const { error } = await supabase
       .from('recipes')
-      .update({ title, description, source_url: sourceUrl, instructions })
+      .update({ 
+        title, 
+        description, 
+        source_url: sourceUrl, 
+        category: category || null,
+        dietary_preference: dietaryPreference || null,
+        total_time: totalTime || null,
+        tags: tags,
+        instructions 
+      })
       .eq('id', params.id);
 
     if (!error) {
@@ -155,15 +172,97 @@ export default function RecipeDetail() {
                 style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 placeholder="Source URL"
               />
+              <div className="grid grid-cols-2 gap-4">
+                <select
+                  value={category}
+                  onChange={e => setCategory(e.target.value as any)}
+                  className="bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300"
+                  style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                >
+                  <option value="">Select Category</option>
+                  <option value="Breakfast">🍳 Breakfast</option>
+                  <option value="Lunch">🥗 Lunch</option>
+                  <option value="Dinner">🍽️ Dinner</option>
+                  <option value="Snack">🍿 Snack</option>
+                </select>
+                <select
+                  value={dietaryPreference}
+                  onChange={e => setDietaryPreference(e.target.value as any)}
+                  className="bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300"
+                  style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                >
+                  <option value="">Select Diet</option>
+                  <option value="Vegan">🌱 Vegan</option>
+                  <option value="Vegetarian">🥕 Vegetarian</option>
+                  <option value="Gluten-Free">🌾 Gluten-Free</option>
+                  <option value="Pescetarian">🐟 Pescetarian</option>
+                  <option value="Dairy-Free">🥛 Dairy-Free</option>
+                  <option value="Nut-Free">🥜 Nut-Free</option>
+                  <option value="Keto">🥑 Keto</option>
+                  <option value="Paleo">🍖 Paleo</option>
+                  <option value="Low-Carb">🥖 Low-Carb</option>
+                </select>
+              </div>
+              <input
+                type="number"
+                value={totalTime}
+                onChange={e => setTotalTime(e.target.value ? parseInt(e.target.value) : '')}
+                className="w-full bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300"
+                style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                placeholder="Total time (mins)"
+                min="1"
+              />
+              <input
+                value={tags.join(', ')}
+                onChange={e => setTags(e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
+                className="w-full bg-white p-4 rounded-2xl text-black font-bold text-sm outline-none border-2 border-slate-300"
+                style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                placeholder="Tags (comma separated: Vegetarian, Gluten-Free, One-Pot)"
+              />
             </div>
           ) : (
             <>
               <p className="text-slate-700 text-lg leading-relaxed mb-6">{description || "No description provided."}</p>
               {sourceUrl && (
-                <a href={sourceUrl} target="_blank" className="inline-flex items-center gap-2 bg-white text-[#004225] px-5 py-3 rounded-2xl border-2 border-slate-200 font-black uppercase text-xs active:scale-95 transition-all shadow-sm">
+                <a href={sourceUrl} target="_blank" className="inline-flex items-center gap-2 bg-white text-[#004225] px-5 py-3 rounded-2xl border-2 border-slate-200 font-black uppercase text-xs active:scale-95 transition-all shadow-sm mb-4">
                   Source Article
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                 </a>
+              )}
+              <div className="flex flex-wrap gap-3 mb-4">
+                {category && (
+                  <span className="inline-flex items-center gap-2 bg-[#004225] text-white px-3 py-1 rounded-full text-xs font-black uppercase">
+                    {category === 'Breakfast' && '🍳'} {category === 'Lunch' && '🥗'} {category === 'Dinner' && '🍽️'} {category === 'Snack' && '🍿'} {category}
+                  </span>
+                )}
+                {dietaryPreference && (
+                  <span className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
+                    {dietaryPreference === 'Vegan' && '🌱'}
+                    {dietaryPreference === 'Vegetarian' && '🥕'}
+                    {dietaryPreference === 'Gluten-Free' && '🌾'}
+                    {dietaryPreference === 'Pescetarian' && '🐟'}
+                    {dietaryPreference === 'Dairy-Free' && '🥛'}
+                    {dietaryPreference === 'Nut-Free' && '🥜'}
+                    {dietaryPreference === 'Keto' && '🥑'}
+                    {dietaryPreference === 'Paleo' && '🍖'}
+                    {dietaryPreference === 'Low-Carb' && '🥖'}
+                    {dietaryPreference}
+                  </span>
+                )}
+                {totalTime && (
+                  <span className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold">
+                    ⏱️ {totalTime} mins
+                  </span>
+                )}
+              </div>
+              {tags && tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag, index) => (
+                    <span key={index} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-full text-xs font-medium">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               )}
             </>
           )}

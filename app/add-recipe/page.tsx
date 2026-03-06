@@ -14,7 +14,6 @@ export default function AddRecipe() {
         .insert([{
           title: 'New Recipe',
           description: '',
-          servings: 4,
           instructions: ['']
         }])
         .select()

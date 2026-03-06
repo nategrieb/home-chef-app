@@ -11,6 +11,10 @@ interface Recipe {
   description?: string;
   servings?: number;
   serving_unit?: string;
+  category?: string;
+  total_time?: number;
+  tags?: string[];
+  dietary_preference?: string;
   ingredients?: Ingredient[];
 }
 
@@ -28,14 +32,44 @@ export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDel
               {recipe.description || "A delicious recipe waiting to be discovered."}
             </p>
             <div className="flex items-center gap-4 text-xs text-slate-500">
-              <div className="flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span className="font-medium">
-                  Serves {recipe.servings || 4} {recipe.serving_unit || 'servings'}
+              {recipe.dietary_preference && (
+                <div className="flex items-center gap-1">
+                  <span className="font-medium">
+                    {recipe.dietary_preference === 'Vegan' && '🌱'}
+                    {recipe.dietary_preference === 'Vegetarian' && '🥕'}
+                    {recipe.dietary_preference === 'Gluten-Free' && '🌾'}
+                    {recipe.dietary_preference === 'Pescetarian' && '🐟'}
+                    {recipe.dietary_preference === 'Dairy-Free' && '🥛'}
+                    {recipe.dietary_preference === 'Nut-Free' && '🥜'}
+                    {recipe.dietary_preference === 'Keto' && '🥑'}
+                    {recipe.dietary_preference === 'Paleo' && '🍖'}
+                    {recipe.dietary_preference === 'Low-Carb' && '🥖'}
+                    {recipe.dietary_preference}
+                  </span>
+                </div>
+              )}
+              {recipe.total_time && (
+                <div className="flex items-center gap-1">
+                  <span className="font-medium">⏱️ {recipe.total_time} mins</span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {recipe.category && (
+                <span className="inline-flex items-center gap-1 bg-[#004225] text-white px-2 py-1 rounded-full text-xs font-bold uppercase">
+                  {recipe.category === 'Breakfast' && '🍳'} {recipe.category === 'Lunch' && '🥗'} {recipe.category === 'Dinner' && '🍽️'} {recipe.category === 'Snack' && '🍿'} {recipe.category}
                 </span>
-              </div>
+              )}
+              {recipe.tags && recipe.tags.slice(0, 2).map((tag, index) => (
+                <span key={index} className="bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-xs font-medium">
+                  {tag}
+                </span>
+              ))}
+              {recipe.tags && recipe.tags.length > 2 && (
+                <span className="bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-xs font-medium">
+                  +{recipe.tags.length - 2} more
+                </span>
+              )}
             </div>
           </div>
           <button

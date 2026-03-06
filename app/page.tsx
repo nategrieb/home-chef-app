@@ -6,7 +6,13 @@ import MobileNav from '../components/MobileNav';
 
 export default function Home() {
   const [recipes, setRecipes] = useState<any[]>([]);
+  const [filteredRecipes, setFilteredRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dietaryFilter, setDietaryFilter] = useState<'all' | 'Vegan' | 'Vegetarian' | 'Gluten-Free' | 'Pescetarian' | 'Dairy-Free' | 'Nut-Free' | 'Keto' | 'Paleo' | 'Low-Carb'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('all');
+  const [timeFilter, setTimeFilter] = useState<'all' | 'under-30' | '30-60' | 'over-60'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical' | 'servings-high' | 'servings-low'>('newest');
 
   useEffect(() => {
     async function fetchRecipes() {
@@ -16,7 +22,70 @@ export default function Home() {
     }
     fetchRecipes();
   }, []);
+  // Filter and sort recipes based on current state
+  useEffect(() => {
+    let filtered = [...recipes];
 
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(recipe => {
+        // Search in title and description
+        const titleMatch = recipe.title?.toLowerCase().includes(query);
+        const descriptionMatch = recipe.description?.toLowerCase().includes(query);
+        
+        // Search in ingredients
+        const ingredientMatch = recipe.ingredients?.some((ing: any) => 
+          ing.item_name?.toLowerCase().includes(query)
+        );
+
+        return titleMatch || descriptionMatch || ingredientMatch;
+      });
+    }
+
+    // Apply dietary preference filter
+    if (dietaryFilter !== 'all') {
+      filtered = filtered.filter(recipe => recipe.dietary_preference === dietaryFilter);
+    }
+
+    // Apply category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(recipe => recipe.category === categoryFilter);
+    }
+
+    // Apply time filter
+    if (timeFilter !== 'all') {
+      filtered = filtered.filter(recipe => {
+        const time = recipe.total_time;
+        if (!time) return false;
+        switch (timeFilter) {
+          case 'under-30': return time < 30;
+          case '30-60': return time >= 30 && time <= 60;
+          case 'over-60': return time > 60;
+          default: return true;
+        }
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'alphabetical':
+          return a.title.localeCompare(b.title);
+        case 'servings-high':
+          return (b.servings || 4) - (a.servings || 4);
+        case 'servings-low':
+          return (a.servings || 4) - (b.servings || 4);
+        case 'newest':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+
+    setFilteredRecipes(filtered);
+  }, [recipes, searchQuery, dietaryFilter, categoryFilter, timeFilter, sortBy]);
   const deleteRecipe = async (id: string) => {
     await supabase.from('ingredients').delete().eq('recipe_id', id);
     const { error } = await supabase.from('recipes').delete().eq('id', id);
@@ -38,7 +107,6 @@ export default function Home() {
               .insert([{
                 title: 'New Recipe',
                 description: '',
-                servings: 4,
                 instructions: ['']
               }])
               .select()
@@ -69,13 +137,115 @@ export default function Home() {
         </button>
       </header>
 
+      {/* Search and Filter Controls */}
+      <div className="mb-8 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Search recipes, ingredients, or descriptions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-500 font-medium focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+          />
+        </div>
+
+        {/* Filter and Sort Controls */}
+        <div className="flex flex-wrap gap-3">
+          {/* Dietary Preference Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Diet:</span>
+            <select
+              value={dietaryFilter}
+              onChange={(e) => setDietaryFilter(e.target.value as any)}
+              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+            >
+              <option value="all">All Diets</option>
+              <option value="Vegan">🌱 Vegan</option>
+              <option value="Vegetarian">🥕 Vegetarian</option>
+              <option value="Gluten-Free">🌾 Gluten-Free</option>
+              <option value="Pescetarian">🐟 Pescetarian</option>
+              <option value="Dairy-Free">🥛 Dairy-Free</option>
+              <option value="Nut-Free">🥜 Nut-Free</option>
+              <option value="Keto">🥑 Keto</option>
+              <option value="Paleo">🍖 Paleo</option>
+              <option value="Low-Carb">🥖 Low-Carb</option>
+            </select>
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Meal:</span>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as any)}
+              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+            >
+              <option value="all">All Meals</option>
+              <option value="Breakfast">🍳 Breakfast</option>
+              <option value="Lunch">🥗 Lunch</option>
+              <option value="Dinner">🍽️ Dinner</option>
+              <option value="Snack">🍿 Snack</option>
+            </select>
+          </div>
+
+          {/* Time Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Time:</span>
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value as any)}
+              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+            >
+              <option value="all">Any Time</option>
+              <option value="under-30">Under 30 mins</option>
+              <option value="30-60">30-60 mins</option>
+              <option value="over-60">Over 60 mins</option>
+            </select>
+          </div>
+
+          {/* Sort Options */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="alphabetical">A-Z</option>
+              <option value="servings-high">Most Servings</option>
+              <option value="servings-low">Fewest Servings</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {loading ? (
         <div className="py-20 text-center text-slate-900 font-black animate-pulse uppercase tracking-widest">Consulting the Chef...</div>
       ) : (
         <div className="grid gap-4">
-          {recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} onDelete={deleteRecipe} />
-          ))}
+          {filteredRecipes.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🔍</div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No recipes found</h3>
+              <p className="text-slate-600">
+                {searchQuery || dietaryFilter !== 'all' || categoryFilter !== 'all' || timeFilter !== 'all'
+                  ? "Try adjusting your search or filters" 
+                  : "Create your first recipe to get started"}
+              </p>
+            </div>
+          ) : (
+            filteredRecipes.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} onDelete={deleteRecipe} />
+            ))
+          )}
         </div>
       )}
       <MobileNav />
