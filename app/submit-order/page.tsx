@@ -26,6 +26,9 @@ export default function SubmitOrderPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'error' | 'info'; message: string } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -55,6 +58,12 @@ export default function SubmitOrderPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!showSuccess) return;
+    const timer = window.setTimeout(() => setShowSuccess(false), 1700);
+    return () => window.clearTimeout(timer);
+  }, [showSuccess]);
+
   const selectedRecipeName = useMemo(
     () => recipes.find((r) => r.id === selectedRecipeId)?.title || 'No recipe selected',
     [recipes, selectedRecipeId]
@@ -77,7 +86,7 @@ export default function SubmitOrderPage() {
     ]);
 
     if (!recipeData) {
-      alert('Could not load recipe details.');
+      setFeedback({ type: 'error', message: 'Could not load recipe details.' });
       setLoadingRecipe(false);
       return;
     }
@@ -94,12 +103,13 @@ export default function SubmitOrderPage() {
     );
 
     setInstructions(Array.isArray(recipeData.instructions) ? recipeData.instructions : []);
+    setFeedback({ type: 'info', message: 'Recipe loaded. You can customize and submit.' });
     setLoadingRecipe(false);
   }
 
   async function submitOrder() {
     if (!orderTitle.trim()) {
-      alert('Please add an order title before submitting.');
+      setFeedback({ type: 'error', message: 'Add an order title before submitting.' });
       return;
     }
 
@@ -119,12 +129,40 @@ export default function SubmitOrderPage() {
     setSaving(false);
 
     if (error) {
-      alert('Could not submit order. Confirm the current_orders table exists.');
+      setFeedback({ type: 'error', message: 'Could not submit order. Confirm `current_orders` exists.' });
       return;
     }
 
     setLastUpdated(payload.updated_at);
-    alert('Current order updated.');
+    setFeedback(null);
+    setShowSuccess(true);
+  }
+
+  async function clearOrder() {
+    const payload = {
+      id: 'current',
+      recipe_id: null,
+      order_title: '',
+      order_notes: null,
+      order_ingredients: [],
+      order_instructions: [],
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('current_orders').upsert(payload, { onConflict: 'id' });
+    if (error) {
+      setFeedback({ type: 'error', message: 'Could not reset order. Please try again.' });
+      return;
+    }
+
+    setSelectedRecipeId('');
+    setOrderTitle('');
+    setOrderNotes('');
+    setIngredients([]);
+    setInstructions([]);
+    setLastUpdated('');
+    setShowClearConfirm(false);
+    setFeedback({ type: 'info', message: 'Current order cleared.' });
   }
 
   if (loading) {
@@ -168,6 +206,18 @@ export default function SubmitOrderPage() {
       </section>
 
       <section className="bg-slate-50 rounded-3xl border border-slate-200 p-4 sm:p-6 space-y-4">
+        {feedback && (
+          <div
+            className={`rounded-xl px-3 py-2 text-sm font-semibold ${
+              feedback.type === 'error'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+            }`}
+          >
+            {feedback.message}
+          </div>
+        )}
+
         <input
           value={orderTitle}
           onChange={(e) => setOrderTitle(e.target.value)}
@@ -288,19 +338,66 @@ export default function SubmitOrderPage() {
         </div>
 
         <div className="pt-2 border-t border-slate-200">
-          <button
-            type="button"
-            onClick={submitOrder}
-            disabled={saving}
-            className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300"
-          >
-            {saving ? 'Submitting...' : 'Submit Current Order'}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              type="button"
+              onClick={submitOrder}
+              disabled={saving}
+              className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300"
+            >
+              {saving ? 'Submitting...' : 'Submit Current Order'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowClearConfirm(true)}
+              className="w-full sm:w-auto bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 rounded-xl text-sm font-bold uppercase tracking-wide"
+            >
+              Clear Active Order
+            </button>
+          </div>
           <p className="text-xs text-slate-500 mt-2">
             {lastUpdated ? `Last updated: ${new Date(lastUpdated).toLocaleString()}` : 'No submitted order yet.'}
           </p>
         </div>
       </section>
+
+      {showSuccess && (
+        <div className="order-success-backdrop" aria-live="polite" role="status">
+          <div className="order-success-card">
+            <div className="order-success-pop">✓</div>
+            <p className="text-xl font-black text-slate-900">Your order is in</p>
+            <p className="text-sm text-slate-600 font-semibold">We saved it as your current order.</p>
+          </div>
+        </div>
+      )}
+
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[85] flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-red-200 p-6 shadow-2xl">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-600 mb-2">Confirm Clear</p>
+            <h3 className="text-lg font-black text-slate-900 mb-2">Clear active order?</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              This removes the current order from this page and from home.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl text-sm font-bold uppercase tracking-wide"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={clearOrder}
+                className="flex-1 bg-red-600 text-white py-3 rounded-xl text-sm font-black uppercase tracking-wide"
+              >
+                Yes, Clear It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <MobileNav />
     </main>

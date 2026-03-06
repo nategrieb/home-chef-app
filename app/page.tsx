@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import RecipeCard from '../components/RecipeCard';
 import MobileNav from '../components/MobileNav';
 import { buildShoppingStateKey, inferCanonicalIngredient } from '../lib/ingredient-normalization';
+import Link from 'next/link';
 
 const DIET_OPTIONS = [
   'Vegan',
@@ -27,6 +28,12 @@ const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {
 
 const WEEKDAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
+interface CurrentOrder {
+  order_title: string;
+  order_notes?: string | null;
+  updated_at?: string | null;
+}
+
 export default function Home() {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [filteredRecipes, setFilteredRecipes] = useState<any[]>([]);
@@ -38,11 +45,25 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical' | 'servings-high' | 'servings-low'>('newest');
   const [pendingPlanRecipeId, setPendingPlanRecipeId] = useState<string | null>(null);
   const [pendingPlanDayIndex, setPendingPlanDayIndex] = useState<number>((new Date().getDay() + 6) % 7);
+  const [currentOrder, setCurrentOrder] = useState<CurrentOrder | null>(null);
 
   useEffect(() => {
     async function fetchRecipes() {
-      const { data } = await supabase.from('recipes').select(`*, ingredients (calories_per_unit)`).order('created_at', { ascending: false });
+      const [{ data }, { data: orderData }] = await Promise.all([
+        supabase.from('recipes').select(`*, ingredients (calories_per_unit)`).order('created_at', { ascending: false }),
+        supabase
+          .from('current_orders')
+          .select('order_title, order_notes, updated_at')
+          .eq('id', 'current')
+          .maybeSingle(),
+      ]);
+
       if (data) setRecipes(data);
+      if (orderData?.order_title?.trim()) {
+        setCurrentOrder(orderData as CurrentOrder);
+      } else {
+        setCurrentOrder(null);
+      }
       setLoading(false);
     }
     fetchRecipes();
@@ -205,6 +226,29 @@ export default function Home() {
           +
         </button>
       </header>
+
+      {currentOrder && (
+        <section className="mb-8 bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700 mb-1">Active Order</p>
+              <h2 className="text-xl font-black text-slate-900 leading-tight">{currentOrder.order_title}</h2>
+              {currentOrder.order_notes && (
+                <p className="text-sm text-slate-600 mt-1 line-clamp-2">{currentOrder.order_notes}</p>
+              )}
+              {currentOrder.updated_at && (
+                <p className="text-xs text-slate-500 mt-2">Updated {new Date(currentOrder.updated_at).toLocaleString()}</p>
+              )}
+            </div>
+            <Link
+              href="/submit-order"
+              className="inline-flex items-center justify-center bg-[#004225] text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide"
+            >
+              View Order
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Search and Filter Controls */}
       <div className="mb-8 space-y-4">
