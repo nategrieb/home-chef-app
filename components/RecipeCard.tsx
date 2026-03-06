@@ -18,7 +18,13 @@ interface Recipe {
   ingredients?: Ingredient[];
 }
 
-export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDelete: (id: string) => void }) {
+export default function RecipeCard({
+  recipe,
+  onAddToPlan,
+}: {
+  recipe: Recipe;
+  onAddToPlan: (id: string) => void;
+}) {
   const dietaryPreferences = Array.isArray(recipe.dietary_preference)
     ? recipe.dietary_preference
     : recipe.dietary_preference
@@ -84,16 +90,12 @@ export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDel
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (confirm(`Delete "${recipe.title}"?`)) {
-                onDelete(recipe.id);
-              }
+              onAddToPlan(recipe.id);
             }}
-            className="ml-4 p-2.5 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 opacity-100 md:opacity-0 md:group-hover:opacity-100"
-            aria-label="Delete recipe"
+            className="ml-4 px-3 py-2 bg-[#004225] text-white rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#003319] transition-colors"
+            aria-label="Add recipe to plan"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
+            + Plan
           </button>
         </div>
       </Link>

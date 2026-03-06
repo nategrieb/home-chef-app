@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import RecipeCard from '../components/RecipeCard';
 import MobileNav from '../components/MobileNav';
+import { buildShoppingStateKey, inferCanonicalIngredient } from '../lib/ingredient-normalization';
 
 const DIET_OPTIONS = [
   'Vegan',
@@ -24,6 +25,8 @@ const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {
   'Low-Carb': '🥖',
 };
 
+const WEEKDAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
+
 export default function Home() {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [filteredRecipes, setFilteredRecipes] = useState<any[]>([]);
@@ -33,6 +36,8 @@ export default function Home() {
   const [dietaryFilter, setDietaryFilter] = useState<'all' | (typeof DIET_OPTIONS)[number]>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical' | 'servings-high' | 'servings-low'>('newest');
+  const [pendingPlanRecipeId, setPendingPlanRecipeId] = useState<string | null>(null);
+  const [pendingPlanDayIndex, setPendingPlanDayIndex] = useState<number>((new Date().getDay() + 6) % 7);
 
   useEffect(() => {
     async function fetchRecipes() {
@@ -104,10 +109,56 @@ export default function Home() {
   const activeFilterCount =
     (dietaryFilter !== 'all' ? 1 : 0) +
     (categoryFilter !== 'all' ? 1 : 0);
-  const deleteRecipe = async (id: string) => {
-    await supabase.from('ingredients').delete().eq('recipe_id', id);
-    const { error } = await supabase.from('recipes').delete().eq('id', id);
-    if (!error) setRecipes(recipes.filter(r => r.id !== id));
+  const addRecipeToPlan = async (recipeId: string, dayIndex: number) => {
+    const { error } = await supabase.from('meal_plans').insert([{ recipe_id: recipeId, day_of_week: dayIndex }]);
+
+    if (error) {
+      alert('Could not add this recipe to the plan. Please try again.');
+      return;
+    }
+
+    // Keep shopping state aligned with newly added meals.
+    const { data: recipeIngredients } = await supabase
+      .from('ingredients')
+      .select('item_name, unit, canonical_name')
+      .eq('recipe_id', recipeId);
+
+    const ingredientNames = Array.from(
+      new Set(
+        (recipeIngredients || [])
+          .map((row: { item_name: string; unit?: string; canonical_name?: string | null }) => {
+            const canonical = row.canonical_name?.trim() || inferCanonicalIngredient(row.item_name || '');
+            return buildShoppingStateKey(canonical, row.unit || 'item');
+          })
+          .filter(Boolean)
+      )
+    );
+
+    if (ingredientNames.length > 0) {
+      await supabase
+        .from('shopping_list_state')
+        .upsert(
+          ingredientNames.map((itemName) => ({
+            item_name: itemName,
+            is_checked: false,
+            updated_at: new Date().toISOString(),
+          })),
+          { onConflict: 'item_name' }
+        );
+    }
+
+    alert(`Added to ${WEEKDAY_OPTIONS[dayIndex]}.`);
+  };
+
+  const openAddToPlanPicker = (recipeId: string) => {
+    setPendingPlanDayIndex((new Date().getDay() + 6) % 7);
+    setPendingPlanRecipeId(recipeId);
+  };
+
+  const confirmAddToPlan = async () => {
+    if (!pendingPlanRecipeId) return;
+    await addRecipeToPlan(pendingPlanRecipeId, pendingPlanDayIndex);
+    setPendingPlanRecipeId(null);
   };
 
   return (
@@ -256,9 +307,47 @@ export default function Home() {
             </div>
           ) : (
             filteredRecipes.map((recipe) => (
-              <RecipeCard key={recipe.id} recipe={recipe} onDelete={deleteRecipe} />
+              <RecipeCard key={recipe.id} recipe={recipe} onAddToPlan={openAddToPlanPicker} />
             ))
           )}
+        </div>
+      )}
+
+      {pendingPlanRecipeId && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[70] flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 p-6 shadow-2xl">
+            <h3 className="text-lg font-black text-slate-900 mb-1">Add To Plan</h3>
+            <p className="text-sm text-slate-600 mb-4 line-clamp-1">
+              {recipes.find((r) => r.id === pendingPlanRecipeId)?.title || 'Selected recipe'}
+            </p>
+
+            <select
+              value={pendingPlanDayIndex}
+              onChange={(e) => setPendingPlanDayIndex(parseInt(e.target.value))}
+              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 outline-none mb-4"
+            >
+              {WEEKDAY_OPTIONS.map((day, i) => (
+                <option key={day} value={i}>{day}</option>
+              ))}
+            </select>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={confirmAddToPlan}
+                className="flex-1 bg-[#004225] text-white py-3 rounded-xl text-sm font-black uppercase tracking-wide"
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingPlanRecipeId(null)}
+                className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl text-sm font-bold uppercase tracking-wide"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
       <MobileNav />

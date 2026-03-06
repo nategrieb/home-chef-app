@@ -16,6 +16,7 @@ const DIET_OPTIONS = [
 ] as const;
 
 const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'pinch', 'clove', 'slice', 'can'] as const;
+const WEEKDAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
 const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {
   Vegan: '🌱',
@@ -47,6 +48,9 @@ export default function RecipeDetail() {
   const [tags, setTags] = useState<string[]>([]);
   const [ingredients, setIngredients] = useState<any[]>([]);
   const [instructions, setInstructions] = useState<string[]>([]);
+  const [planDayIndex, setPlanDayIndex] = useState<number>((new Date().getDay() + 6) % 7);
+  const [showPlanPicker, setShowPlanPicker] = useState(false);
+  const [showManageActions, setShowManageActions] = useState(false);
 
   useEffect(() => {
     async function fetchRecipe() {
@@ -148,6 +152,44 @@ export default function RecipeDetail() {
         ? current.filter((value) => value !== diet)
         : [...current, diet]
     );
+  };
+
+  const addToPlan = async () => {
+    const { error } = await supabase
+      .from('meal_plans')
+      .insert([{ recipe_id: params.id, day_of_week: planDayIndex }]);
+
+    if (error) {
+      alert('Could not add this recipe to the meal plan. Please try again.');
+      return;
+    }
+
+    setShowPlanPicker(false);
+    alert(`Added to ${WEEKDAY_OPTIONS[planDayIndex]}.`);
+  };
+
+  const openPlanPicker = () => {
+    setPlanDayIndex((new Date().getDay() + 6) % 7);
+    setShowPlanPicker(true);
+  };
+
+  const deleteRecipeRecord = async () => {
+    if (!confirm(`Delete \"${title}\" permanently?`)) return;
+
+    const confirmDelete = prompt('Type DELETE to confirm.');
+    if (confirmDelete !== 'DELETE') return;
+
+    await supabase.from('meal_plans').delete().eq('recipe_id', params.id);
+    await supabase.from('ingredients').delete().eq('recipe_id', params.id);
+
+    const { error } = await supabase.from('recipes').delete().eq('id', params.id);
+
+    if (error) {
+      alert('Could not delete this recipe. Please try again.');
+      return;
+    }
+
+    window.location.href = '/';
   };
 
   if (loading || !recipe) return <div className="p-20 text-center text-slate-900 font-bold">Loading...</div>;
@@ -281,14 +323,17 @@ export default function RecipeDetail() {
             </div>
           ) : (
             <>
-              <p className="text-slate-700 text-lg leading-relaxed mb-6">{description || "No description provided."}</p>
-              {sourceUrl && (
-                <a href={sourceUrl} target="_blank" className="inline-flex items-center gap-2 bg-white text-[#004225] px-5 py-3 rounded-2xl border-2 border-slate-200 font-black uppercase text-xs active:scale-95 transition-all shadow-sm mb-4">
-                  Source Article
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                </a>
-              )}
-              <div className="flex flex-wrap gap-3 mb-4">
+              <div className="mb-5">
+                <button
+                  type="button"
+                  onClick={openPlanPicker}
+                  className="w-full sm:w-auto bg-[#004225] text-white px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide hover:bg-[#003319] transition-colors"
+                >
+                  + Add to Plan
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-3 mb-5">
                 {category && (
                   <span className="inline-flex items-center gap-2 bg-[#004225] text-white px-3 py-1 rounded-full text-xs font-black uppercase">
                     {category === 'Breakfast' && '🍳'} {category === 'Lunch' && '🥗'} {category === 'Dinner' && '🍽️'} {category === 'Snack' && '🍿'} {category}
@@ -305,8 +350,19 @@ export default function RecipeDetail() {
                   </span>
                 )}
               </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+                <p className="text-slate-700 text-lg leading-relaxed">{description || "No description provided."}</p>
+              </div>
+
+              {sourceUrl && (
+                <a href={sourceUrl} target="_blank" className="inline-flex items-center gap-2 bg-white text-[#004225] px-5 py-3 rounded-2xl border-2 border-slate-200 font-black uppercase text-xs active:scale-95 transition-all shadow-sm mb-4">
+                  Source Article
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
+              )}
               {tags && tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-4">
                   {tags.map((tag, index) => (
                     <span key={index} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-full text-xs font-medium">
                       {tag}
@@ -314,6 +370,27 @@ export default function RecipeDetail() {
                   ))}
                 </div>
               )}
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowManageActions((current) => !current)}
+                  className="text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showManageActions ? 'Hide Manage' : 'Manage Recipe'}
+                </button>
+                {showManageActions && (
+                  <div className="mt-2 pt-3 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={deleteRecipeRecord}
+                      className="text-xs font-bold uppercase tracking-wider text-red-600 hover:text-red-700 transition-colors"
+                    >
+                      Delete Recipe
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </section>
@@ -441,6 +518,43 @@ export default function RecipeDetail() {
         </section>
         )}
       </div>
+
+      {showPlanPicker && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[70] flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 p-6 shadow-2xl">
+            <h3 className="text-lg font-black text-slate-900 mb-1">Add To Plan</h3>
+            <p className="text-sm text-slate-600 mb-4 line-clamp-1">{title}</p>
+
+            <select
+              value={planDayIndex}
+              onChange={(e) => setPlanDayIndex(parseInt(e.target.value))}
+              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 outline-none mb-4"
+              style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+            >
+              {WEEKDAY_OPTIONS.map((day, i) => (
+                <option key={day} value={i}>{day}</option>
+              ))}
+            </select>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={addToPlan}
+                className="flex-1 bg-[#004225] text-white py-3 rounded-xl text-sm font-black uppercase tracking-wide"
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPlanPicker(false)}
+                className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl text-sm font-bold uppercase tracking-wide"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <MobileNav />
     </main>
   );
