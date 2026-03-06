@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
 import { format, startOfWeek } from 'date-fns';
 import MobileNav from '../../components/MobileNav';
+import { buildShoppingStateKey, inferCanonicalIngredient } from '../../lib/ingredient-normalization';
 
 export default function MealPlan() {
   const [mealPlans, setMealPlans] = useState<any[]>([]);
@@ -37,13 +38,16 @@ export default function MealPlan() {
       // Mark ingredients for the newly-added recipe as unchecked so shopping list stays state-aware.
       const { data: recipeIngredients } = await supabase
         .from('ingredients')
-        .select('item_name')
+        .select('item_name, unit, canonical_name')
         .eq('recipe_id', recipeId);
 
       const ingredientNames = Array.from(
         new Set(
           (recipeIngredients || [])
-            .map((row: { item_name: string }) => row.item_name?.trim().toLowerCase())
+            .map((row: { item_name: string; unit?: string; canonical_name?: string | null }) => {
+              const canonical = row.canonical_name?.trim() || inferCanonicalIngredient(row.item_name || '');
+              return buildShoppingStateKey(canonical, row.unit || 'item');
+            })
             .filter(Boolean)
         )
       );

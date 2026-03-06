@@ -17,13 +17,18 @@ BEGIN
   END IF;
 
   IF ingredients_udt = 'jsonb' THEN
-    INSERT INTO public.ingredients (recipe_id, item_name, amount, unit, calories_per_unit)
+    INSERT INTO public.ingredients (recipe_id, item_name, canonical_name, preparation_note, amount, unit, calories_per_unit)
     SELECT
       s.recipe_id,
       CASE
         WHEN s.match_parts IS NULL OR s.match_parts[3] IS NULL OR btrim(s.match_parts[3]) = '' THEN s.raw_item_name
         ELSE btrim(s.match_parts[3])
       END AS item_name,
+      CASE
+        WHEN s.match_parts IS NULL OR s.match_parts[3] IS NULL OR btrim(s.match_parts[3]) = '' THEN initcap(s.raw_item_name)
+        ELSE initcap(btrim(s.match_parts[3]))
+      END AS canonical_name,
+      NULL::text AS preparation_note,
       CASE
         WHEN s.match_parts IS NULL THEN 1
         WHEN s.match_parts[1] ~ '^\d+\s+\d+/\d+$' THEN
@@ -104,13 +109,18 @@ BEGIN
     ) s;
 
   ELSIF ingredients_udt = '_text' THEN
-    INSERT INTO public.ingredients (recipe_id, item_name, amount, unit, calories_per_unit)
+    INSERT INTO public.ingredients (recipe_id, item_name, canonical_name, preparation_note, amount, unit, calories_per_unit)
     SELECT
       s.recipe_id,
       CASE
         WHEN s.match_parts IS NULL OR s.match_parts[3] IS NULL OR btrim(s.match_parts[3]) = '' THEN s.raw_item_name
         ELSE btrim(s.match_parts[3])
       END AS item_name,
+      CASE
+        WHEN s.match_parts IS NULL OR s.match_parts[3] IS NULL OR btrim(s.match_parts[3]) = '' THEN initcap(s.raw_item_name)
+        ELSE initcap(btrim(s.match_parts[3]))
+      END AS canonical_name,
+      NULL::text AS preparation_note,
       CASE
         WHEN s.match_parts IS NULL THEN 1
         WHEN s.match_parts[1] ~ '^\d+\s+\d+/\d+$' THEN

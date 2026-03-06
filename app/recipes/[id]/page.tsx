@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useParams, useSearchParams } from 'next/navigation';
 import MobileNav from '../../../components/MobileNav';
+import { inferCanonicalIngredient, inferPreparationNote } from '../../../lib/ingredient-normalization';
 
 const DIET_OPTIONS = [
   'Vegan',
@@ -113,13 +114,20 @@ export default function RecipeDetail() {
     await supabase.from('ingredients').delete().eq('recipe_id', params.id);
     
     if (validIngredients.length > 0) {
-      const ingsWithId = validIngredients.map(ing => ({ 
-        item_name: ing.item_name.trim(), 
-        amount: ing.amount || 0, 
-        unit: ing.unit.trim() || 'g', 
-        recipe_id: params.id, 
-        calories_per_unit: 0 
-      }));
+        const ingsWithId = validIngredients.map(ing => {
+          const normalizedName = ing.item_name.trim();
+          const canonicalName = inferCanonicalIngredient(normalizedName);
+
+          return {
+            canonical_name: canonicalName,
+            preparation_note: inferPreparationNote(normalizedName, canonicalName),
+            item_name: normalizedName,
+            amount: ing.amount || 0,
+            unit: ing.unit.trim() || 'g',
+            recipe_id: params.id,
+            calories_per_unit: 0,
+          };
+        });
       await supabase.from('ingredients').insert(ingsWithId);
     }
     
