@@ -29,9 +29,9 @@ export default function Home() {
   const [filteredRecipes, setFilteredRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [dietaryFilter, setDietaryFilter] = useState<'all' | (typeof DIET_OPTIONS)[number]>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('all');
-  const [timeFilter, setTimeFilter] = useState<'all' | 'under-30' | '30-60' | 'over-60'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical' | 'servings-high' | 'servings-low'>('newest');
 
   useEffect(() => {
@@ -81,20 +81,6 @@ export default function Home() {
       filtered = filtered.filter(recipe => recipe.category === categoryFilter);
     }
 
-    // Apply time filter
-    if (timeFilter !== 'all') {
-      filtered = filtered.filter(recipe => {
-        const time = recipe.total_time;
-        if (!time) return false;
-        switch (timeFilter) {
-          case 'under-30': return time < 30;
-          case '30-60': return time >= 30 && time <= 60;
-          case 'over-60': return time > 60;
-          default: return true;
-        }
-      });
-    }
-
     // Apply sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -113,7 +99,11 @@ export default function Home() {
     });
 
     setFilteredRecipes(filtered);
-  }, [recipes, searchQuery, dietaryFilter, categoryFilter, timeFilter, sortBy]);
+  }, [recipes, searchQuery, dietaryFilter, categoryFilter, sortBy]);
+
+  const activeFilterCount =
+    (dietaryFilter !== 'all' ? 1 : 0) +
+    (categoryFilter !== 'all' ? 1 : 0);
   const deleteRecipe = async (id: string) => {
     await supabase.from('ingredients').delete().eq('recipe_id', id);
     const { error } = await supabase.from('recipes').delete().eq('id', id);
@@ -183,71 +173,70 @@ export default function Home() {
           />
         </div>
 
-        {/* Filter and Sort Controls */}
-        <div className="flex flex-wrap gap-3">
-          {/* Dietary Preference Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Diet:</span>
-            <select
-              value={dietaryFilter}
-              onChange={(e) => setDietaryFilter(e.target.value as any)}
-              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+        {/* Compact Filter + Sort Controls */}
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowFilters((prev) => !prev)}
+              className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 text-left"
             >
-              <option value="all">All Diets</option>
-              {DIET_OPTIONS.map((diet) => (
-                <option key={diet} value={diet}>
-                  {DIET_EMOJI[diet]} {diet}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Category Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Meal:</span>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value as any)}
-              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
-            >
-              <option value="all">All Meals</option>
-              <option value="Breakfast">🍳 Breakfast</option>
-              <option value="Lunch">🥗 Lunch</option>
-              <option value="Dinner">🍽️ Dinner</option>
-              <option value="Snack">🍿 Snack</option>
-            </select>
-          </div>
-
-          {/* Time Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Time:</span>
-            <select
-              value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value as any)}
-              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
-            >
-              <option value="all">Any Time</option>
-              <option value="under-30">Under 30 mins</option>
-              <option value="30-60">30-60 mins</option>
-              <option value="over-60">Over 60 mins</option>
-            </select>
-          </div>
-
-          {/* Sort Options */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">Sort:</span>
+              Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
+            </button>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+              className="w-40 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
             >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
               <option value="alphabetical">A-Z</option>
-              <option value="servings-high">Most Servings</option>
-              <option value="servings-low">Fewest Servings</option>
+              <option value="servings-high">Servings ↑</option>
+              <option value="servings-low">Servings ↓</option>
             </select>
           </div>
+
+          {showFilters && (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <select
+                  value={dietaryFilter}
+                  onChange={(e) => setDietaryFilter(e.target.value as any)}
+                  className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+                >
+                  <option value="all">All Diets</option>
+                  {DIET_OPTIONS.map((diet) => (
+                    <option key={diet} value={diet}>
+                      {DIET_EMOJI[diet]} {diet}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value as any)}
+                  className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+                >
+                  <option value="all">All Meals</option>
+                  <option value="Breakfast">🍳 Breakfast</option>
+                  <option value="Lunch">🥗 Lunch</option>
+                  <option value="Dinner">🍽️ Dinner</option>
+                  <option value="Snack">🍿 Snack</option>
+                </select>
+              </div>
+
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={() => {
+                    setDietaryFilter('all');
+                    setCategoryFilter('all');
+                  }}
+                  className="text-xs font-bold uppercase tracking-wider text-[#004225]"
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -260,7 +249,7 @@ export default function Home() {
               <div className="text-6xl mb-4">🔍</div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">No recipes found</h3>
               <p className="text-slate-600">
-                {searchQuery || dietaryFilter !== 'all' || categoryFilter !== 'all' || timeFilter !== 'all'
+                {searchQuery || dietaryFilter !== 'all' || categoryFilter !== 'all'
                   ? "Try adjusting your search or filters" 
                   : "Create your first recipe to get started"}
               </p>
