@@ -1,14 +1,16 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import MobileNav from '../../../components/MobileNav';
 
 export default function RecipeDetail() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const [recipe, setRecipe] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'ingredients' | 'instructions'>('ingredients');
 
   // Form State
   const [title, setTitle] = useState('');
@@ -27,11 +29,15 @@ export default function RecipeDetail() {
         setSourceUrl(data.source_url || '');
         setIngredients(data.ingredients || []);
         setInstructions(data.instructions || []);
+
+        // Auto-start editing for new recipes or when edit=true is in URL
+        const shouldEdit = searchParams.get('edit') === 'true' || data.title === 'New Recipe';
+        setIsEditing(shouldEdit);
       }
       setLoading(false);
     }
     fetchRecipe();
-  }, [params.id]);
+  }, [params.id, searchParams]);
 
   const saveChanges = async () => {
     // Filter out empty ingredients
@@ -67,7 +73,12 @@ export default function RecipeDetail() {
       }
       
       setIsEditing(false);
-      window.location.reload();
+      // For new recipes, redirect to home page after saving
+      if (recipe?.title === 'New Recipe') {
+        window.location.href = '/';
+      } else {
+        window.location.reload();
+      }
     }
   };
 
@@ -75,17 +86,42 @@ export default function RecipeDetail() {
 
   return (
     <main className="min-h-screen bg-white pb-40">
-      {/* Sticky Navigation Jump Links */}
-      <nav className="sticky top-0 bg-white/95 backdrop-blur-md z-40 border-b border-slate-100 flex justify-around p-4 shadow-sm">
-        <a href="#ingredients" className="text-[10px] font-black uppercase tracking-widest text-slate-400 active:text-[#004225]">Ingredients</a>
-        <a href="#instructions" className="text-[10px] font-black uppercase tracking-widest text-slate-400 active:text-[#004225]">Instructions</a>
+      {/* Floating Action Button for Edit/Save */}
+      <div className="fixed bottom-24 right-6 z-50">
         <button 
           onClick={() => isEditing ? saveChanges() : setIsEditing(true)} 
-          className="text-[10px] font-black uppercase tracking-widest text-[#004225]"
+          className="bg-[#004225] text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center font-black text-lg active:scale-95 transition-all hover:bg-[#003319]"
         >
-          {isEditing ? "Save" : "Edit"}
+          {isEditing ? "✓" : "✎"}
         </button>
-      </nav>
+      </div>
+
+      {/* Cancel Button for New Recipes */}
+      {isEditing && recipe?.title === 'New Recipe' && (
+        <div className="fixed bottom-24 left-6 z-50">
+          <button 
+            onClick={async () => {
+              if (confirm('Cancel creating this recipe? This will permanently delete the draft.')) {
+                try {
+                  // Delete ingredients first
+                  await supabase.from('ingredients').delete().eq('recipe_id', params.id);
+                  // Then delete the recipe
+                  await supabase.from('recipes').delete().eq('id', params.id);
+                  // Navigate back to home
+                  window.location.href = '/';
+                } catch (error) {
+                  console.error('Error deleting draft recipe:', error);
+                  alert('Error deleting draft. Please try again.');
+                }
+              }
+            }} 
+            className="bg-red-500 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center font-black text-lg active:scale-95 transition-all hover:bg-red-600"
+            title="Cancel and Delete Draft"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-6 pt-10">
         <header className="mb-8">
@@ -133,79 +169,122 @@ export default function RecipeDetail() {
           )}
         </section>
 
+        {/* Tab Selector */}
+        <div className="flex bg-slate-100 rounded-2xl p-1 mb-8 border border-slate-200">
+          <button
+            onClick={() => setActiveTab('ingredients')}
+            className={`flex-1 py-3 px-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${
+              activeTab === 'ingredients'
+                ? 'bg-[#004225] text-white shadow-lg'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            🥕 Ingredients
+          </button>
+          <button
+            onClick={() => setActiveTab('instructions')}
+            className={`flex-1 py-3 px-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${
+              activeTab === 'instructions'
+                ? 'bg-[#004225] text-white shadow-lg'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            👨‍🍳 Instructions
+          </button>
+        </div>
+
         {/* Ingredients Section with Unit Input */}
-        <section id="ingredients" className="mb-12 scroll-mt-24">
-          <h2 className="text-xl font-black uppercase tracking-widest text-slate-900 mb-6 border-l-4 border-[#004225] pl-4">Ingredients</h2>
-          <div className="space-y-2">
+        {activeTab === 'ingredients' && (
+        <section className="mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 bg-[#004225] rounded-full flex items-center justify-center">
+              <span className="text-white font-black text-sm">🥕</span>
+            </div>
+            <h2 className="text-2xl font-black uppercase tracking-widest text-slate-900">Ingredients</h2>
+            {isEditing && (
+              <span className="text-sm text-slate-500 font-medium">({ingredients.length} items)</span>
+            )}
+          </div>
+          <div className="space-y-3">
             {ingredients.map((ing: any, i: number) => (
               <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 {isEditing ? (
-                  <div className="flex gap-2 w-full">
+                  <div className="flex gap-3 w-full items-center">
                     <input 
                       value={ing.item_name} 
-                      placeholder="Item"
+                      placeholder="Ingredient name"
                       onChange={e => { const n = [...ingredients]; n[i].item_name = e.target.value; setIngredients(n); }} 
-                      className="flex-1 bg-white border border-slate-300 p-2 rounded-lg font-black text-black outline-none" 
+                      className="flex-1 bg-white border border-slate-300 p-3 rounded-lg font-bold text-black outline-none" 
                       style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                     />
                     <input 
                       value={ing.amount} 
                       placeholder="Qty"
                       onChange={e => { const n = [...ingredients]; n[i].amount = e.target.value; setIngredients(n); }} 
-                      className="w-14 bg-white border border-slate-300 p-2 rounded-lg text-center font-black text-black outline-none" 
+                      className="w-16 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none" 
                       style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                     />
                     <input 
                       value={ing.unit} 
                       placeholder="Unit"
                       onChange={e => { const n = [...ingredients]; n[i].unit = e.target.value; setIngredients(n); }} 
-                      className="w-14 bg-white border border-slate-300 p-2 rounded-lg text-center font-black text-black outline-none" 
+                      className="w-16 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none" 
                       style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                     />
-                    <button onClick={() => setIngredients(ingredients.filter((_, idx) => idx !== i))} className="text-red-500 font-black p-2">×</button>
+                    <button onClick={() => setIngredients(ingredients.filter((_, idx) => idx !== i))} className="w-8 h-8 bg-red-100 text-red-600 rounded-full font-black text-sm hover:bg-red-200 transition-colors">×</button>
                   </div>
                 ) : (
                   <label className="flex items-center gap-4 w-full cursor-pointer group">
                     <input type="checkbox" className="w-6 h-6 rounded-full border-2 border-slate-300 appearance-none checked:bg-[#004225] transition-all shrink-0" />
-                    <span className="font-bold text-slate-900 group-has-[:checked]:text-slate-300 group-has-[:checked]:line-through">{ing.item_name}</span>
-                    <span className="ml-auto text-xs font-black text-slate-400 uppercase">{ing.amount}{ing.unit}</span>
+                    <span className="font-bold text-slate-900 group-has-[:checked]:text-slate-300 group-has-[:checked]:line-through flex-1">{ing.item_name}</span>
+                    <span className="text-sm font-black text-slate-400 uppercase shrink-0">{ing.amount}{ing.unit}</span>
                   </label>
                 )}
               </div>
             ))}
             {isEditing && (
-              <button onClick={() => setIngredients([...ingredients, { item_name: '', amount: '', unit: 'g' }])} className="text-[#004225] font-black text-xs uppercase p-4">+ Add Ingredient</button>
+              <button onClick={() => setIngredients([...ingredients, { item_name: '', amount: '', unit: 'g' }])} className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors">+ Add Ingredient</button>
             )}
           </div>
         </section>
+        )}
 
         {/* Instructions Section */}
-        <section id="instructions" className="scroll-mt-24">
-          <h2 className="text-xl font-black uppercase tracking-widest text-slate-900 mb-8 border-l-4 border-slate-900 pl-4">Instructions</h2>
-          <div className="space-y-10">
+        {activeTab === 'instructions' && (
+        <section className="mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 bg-[#004225] rounded-full flex items-center justify-center">
+              <span className="text-white font-black text-sm">👨‍🍳</span>
+            </div>
+            <h2 className="text-2xl font-black uppercase tracking-widest text-slate-900">Instructions</h2>
+          </div>
+          
+          <div className="space-y-6">
             {instructions.map((step: string, i: number) => (
-              <div key={i} className="flex gap-6">
-                <span className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black shrink-0 shadow-lg">{i + 1}</span>
+              <div key={i} className="flex gap-4">
+                <span className="w-8 h-8 rounded-2xl bg-[#004225] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-lg">{i + 1}</span>
                 {isEditing ? (
                   <div className="w-full relative">
                     <textarea 
                       value={step} 
                       onChange={e => { const n = [...instructions]; n[i] = e.target.value; setInstructions(n); }} 
-                      className="w-full bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300" 
-                      style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
+                      className="w-full bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300 resize-none" 
+                      style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                      rows={3}
                     />
                     <button onClick={() => setInstructions(instructions.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-600 text-white w-6 h-6 rounded-full font-black text-xs">×</button>
                   </div>
                 ) : (
-                  <p className="text-xl text-slate-800 leading-snug font-medium pt-1">{step}</p>
+                  <p className="text-lg text-slate-800 leading-relaxed font-medium pt-1 flex-1">{step}</p>
                 )}
               </div>
             ))}
             {isEditing && (
-               <button onClick={() => setInstructions([...instructions, ''])} className="text-[#004225] font-black text-xs uppercase tracking-widest">+ Add Step</button>
+              <button onClick={() => setInstructions([...instructions, ''])} className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors">+ Add Step</button>
             )}
           </div>
         </section>
+        )}
       </div>
       <MobileNav />
     </main>

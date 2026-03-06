@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import RecipeCard from '../components/RecipeCard';
-import Link from 'next/link';
 import MobileNav from '../components/MobileNav';
 
 export default function Home() {
@@ -31,9 +30,43 @@ export default function Home() {
           <h1 className="text-5xl font-black tracking-tighter text-slate-900 uppercase italic">The Menu</h1>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Kitchen of Grieb</p>
         </div>
-        <Link href="/add-recipe" className="bg-[#004225] text-white px-6 py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all">
-          + Add
-        </Link>
+        <button 
+          onClick={async () => {
+            // Create a blank recipe record
+            const { data: recipe, error } = await supabase
+              .from('recipes')
+              .insert([{
+                title: 'New Recipe',
+                description: '',
+                servings: 4,
+                instructions: ['']
+              }])
+              .select()
+              .single();
+
+            if (error) {
+              console.error('Error creating blank recipe:', error);
+              alert('Error creating new recipe. Please try again.');
+              return;
+            }
+
+            // Create a single blank ingredient
+            await supabase.from('ingredients').insert([{
+              recipe_id: recipe.id,
+              item_name: '',
+              amount: 0,
+              unit: 'g',
+              calories_per_unit: 0
+            }]);
+
+            // Redirect to the edit view
+            window.location.href = `/recipes/${recipe.id}?edit=true`;
+          }}
+          className="bg-[#004225] text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center font-black text-xl active:scale-95 transition-all hover:bg-[#003319]"
+          title="Add New Recipe"
+        >
+          +
+        </button>
       </header>
 
       {loading ? (
