@@ -4,6 +4,28 @@ import { supabase } from '../../../lib/supabase';
 import { useParams, useSearchParams } from 'next/navigation';
 import MobileNav from '../../../components/MobileNav';
 
+const DIET_OPTIONS = [
+  'Vegan',
+  'Vegetarian',
+  'Gluten-Free',
+  'Pescetarian',
+  'Dairy-Free',
+  'Nut-Free',
+  'Low-Carb',
+] as const;
+
+const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {
+  Vegan: '🌱',
+  Vegetarian: '🥕',
+  'Gluten-Free': '🌾',
+  Pescetarian: '🐟',
+  'Dairy-Free': '🥛',
+  'Nut-Free': '🥜',
+  'Low-Carb': '🥖',
+};
+
+type DietOption = (typeof DIET_OPTIONS)[number];
+
 export default function RecipeDetail() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -17,7 +39,7 @@ export default function RecipeDetail() {
   const [description, setDescription] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [category, setCategory] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | ''>('');
-  const [dietaryPreference, setDietaryPreference] = useState<'Vegan' | 'Vegetarian' | 'Gluten-Free' | 'Pescetarian' | 'Dairy-Free' | 'Nut-Free' | 'Keto' | 'Paleo' | 'Low-Carb' | ''>('');
+  const [dietaryPreference, setDietaryPreference] = useState<DietOption[]>([]);
   const [totalTime, setTotalTime] = useState<number | ''>('');
   const [tags, setTags] = useState<string[]>([]);
   const [ingredients, setIngredients] = useState<any[]>([]);
@@ -32,7 +54,13 @@ export default function RecipeDetail() {
         setDescription(data.description || '');
         setSourceUrl(data.source_url || '');
         setCategory(data.category || '');
-        setDietaryPreference(data.dietary_preference || '');
+        if (Array.isArray(data.dietary_preference)) {
+          setDietaryPreference(data.dietary_preference as DietOption[]);
+        } else if (data.dietary_preference) {
+          setDietaryPreference([data.dietary_preference as DietOption]);
+        } else {
+          setDietaryPreference([]);
+        }
         setTotalTime(data.total_time || '');
         setTags(data.tags || []);
         setIngredients(data.ingredients || []);
@@ -67,36 +95,49 @@ export default function RecipeDetail() {
         description, 
         source_url: sourceUrl, 
         category: category || null,
-        dietary_preference: dietaryPreference || null,
+        dietary_preference: dietaryPreference.length ? dietaryPreference : null,
         total_time: totalTime || null,
         tags: tags,
         instructions 
       })
       .eq('id', params.id);
 
-    if (!error) {
-      // Re-sync ingredients - only delete and re-insert if there are valid ingredients
-      await supabase.from('ingredients').delete().eq('recipe_id', params.id);
-      
-      if (validIngredients.length > 0) {
-        const ingsWithId = validIngredients.map(ing => ({ 
-          item_name: ing.item_name.trim(), 
-          amount: ing.amount || 0, 
-          unit: ing.unit.trim() || 'g', 
-          recipe_id: params.id, 
-          calories_per_unit: 0 
-        }));
-        await supabase.from('ingredients').insert(ingsWithId);
-      }
-      
-      setIsEditing(false);
-      // For new recipes, redirect to home page after saving
-      if (recipe?.title === 'New Recipe') {
-        window.location.href = '/';
-      } else {
-        window.location.reload();
-      }
+    if (error) {
+      const details = [error.message, error.details, error.hint].filter(Boolean).join('\n');
+      console.error('Error saving recipe:', error);
+      alert(`Could not save recipe.\n${details}`);
+      return;
     }
+
+    // Re-sync ingredients - only delete and re-insert if there are valid ingredients
+    await supabase.from('ingredients').delete().eq('recipe_id', params.id);
+    
+    if (validIngredients.length > 0) {
+      const ingsWithId = validIngredients.map(ing => ({ 
+        item_name: ing.item_name.trim(), 
+        amount: ing.amount || 0, 
+        unit: ing.unit.trim() || 'g', 
+        recipe_id: params.id, 
+        calories_per_unit: 0 
+      }));
+      await supabase.from('ingredients').insert(ingsWithId);
+    }
+    
+    setIsEditing(false);
+    // For new recipes, redirect to home page after saving
+    if (recipe?.title === 'New Recipe') {
+      window.location.href = '/';
+    } else {
+      window.location.reload();
+    }
+  };
+
+  const toggleDiet = (diet: DietOption) => {
+    setDietaryPreference((current) =>
+      current.includes(diet)
+        ? current.filter((value) => value !== diet)
+        : [...current, diet]
+    );
   };
 
   if (loading || !recipe) return <div className="p-20 text-center text-slate-900 font-bold">Loading...</div>;
@@ -185,23 +226,28 @@ export default function RecipeDetail() {
                   <option value="Dinner">🍽️ Dinner</option>
                   <option value="Snack">🍿 Snack</option>
                 </select>
-                <select
-                  value={dietaryPreference}
-                  onChange={e => setDietaryPreference(e.target.value as any)}
-                  className="bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300"
-                  style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
-                >
-                  <option value="">Select Diet</option>
-                  <option value="Vegan">🌱 Vegan</option>
-                  <option value="Vegetarian">🥕 Vegetarian</option>
-                  <option value="Gluten-Free">🌾 Gluten-Free</option>
-                  <option value="Pescetarian">🐟 Pescetarian</option>
-                  <option value="Dairy-Free">🥛 Dairy-Free</option>
-                  <option value="Nut-Free">🥜 Nut-Free</option>
-                  <option value="Keto">🥑 Keto</option>
-                  <option value="Paleo">🍖 Paleo</option>
-                  <option value="Low-Carb">🥖 Low-Carb</option>
-                </select>
+                <div className="bg-white p-3 rounded-2xl border-2 border-slate-300">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-bold mb-2">Dietary Tags</p>
+                  <div className="flex flex-wrap gap-2">
+                    {DIET_OPTIONS.map((diet) => {
+                      const isSelected = dietaryPreference.includes(diet);
+                      return (
+                        <button
+                          key={diet}
+                          type="button"
+                          onClick={() => toggleDiet(diet)}
+                          className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
+                            isSelected
+                              ? 'bg-[#004225] text-white border-[#004225]'
+                              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                          }`}
+                        >
+                          {DIET_EMOJI[diet]} {diet}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
               <input
                 type="number"
@@ -235,20 +281,11 @@ export default function RecipeDetail() {
                     {category === 'Breakfast' && '🍳'} {category === 'Lunch' && '🥗'} {category === 'Dinner' && '🍽️'} {category === 'Snack' && '🍿'} {category}
                   </span>
                 )}
-                {dietaryPreference && (
-                  <span className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
-                    {dietaryPreference === 'Vegan' && '🌱'}
-                    {dietaryPreference === 'Vegetarian' && '🥕'}
-                    {dietaryPreference === 'Gluten-Free' && '🌾'}
-                    {dietaryPreference === 'Pescetarian' && '🐟'}
-                    {dietaryPreference === 'Dairy-Free' && '🥛'}
-                    {dietaryPreference === 'Nut-Free' && '🥜'}
-                    {dietaryPreference === 'Keto' && '🥑'}
-                    {dietaryPreference === 'Paleo' && '🍖'}
-                    {dietaryPreference === 'Low-Carb' && '🥖'}
-                    {dietaryPreference}
+                {dietaryPreference.length > 0 && dietaryPreference.map((diet) => (
+                  <span key={diet} className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
+                    {DIET_EMOJI[diet]} {diet}
                   </span>
-                )}
+                ))}
                 {totalTime && (
                   <span className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold">
                     ⏱️ {totalTime} mins

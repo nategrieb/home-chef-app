@@ -4,12 +4,32 @@ import { supabase } from '../lib/supabase';
 import RecipeCard from '../components/RecipeCard';
 import MobileNav from '../components/MobileNav';
 
+const DIET_OPTIONS = [
+  'Vegan',
+  'Vegetarian',
+  'Gluten-Free',
+  'Pescetarian',
+  'Dairy-Free',
+  'Nut-Free',
+  'Low-Carb',
+] as const;
+
+const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {
+  Vegan: '🌱',
+  Vegetarian: '🥕',
+  'Gluten-Free': '🌾',
+  Pescetarian: '🐟',
+  'Dairy-Free': '🥛',
+  'Nut-Free': '🥜',
+  'Low-Carb': '🥖',
+};
+
 export default function Home() {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [filteredRecipes, setFilteredRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [dietaryFilter, setDietaryFilter] = useState<'all' | 'Vegan' | 'Vegetarian' | 'Gluten-Free' | 'Pescetarian' | 'Dairy-Free' | 'Nut-Free' | 'Keto' | 'Paleo' | 'Low-Carb'>('all');
+  const [dietaryFilter, setDietaryFilter] = useState<'all' | (typeof DIET_OPTIONS)[number]>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('all');
   const [timeFilter, setTimeFilter] = useState<'all' | 'under-30' | '30-60' | 'over-60'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical' | 'servings-high' | 'servings-low'>('newest');
@@ -45,7 +65,15 @@ export default function Home() {
 
     // Apply dietary preference filter
     if (dietaryFilter !== 'all') {
-      filtered = filtered.filter(recipe => recipe.dietary_preference === dietaryFilter);
+      filtered = filtered.filter((recipe) => {
+        if (!recipe.dietary_preference) return false;
+
+        const diets = Array.isArray(recipe.dietary_preference)
+          ? recipe.dietary_preference
+          : [recipe.dietary_preference];
+
+        return diets.includes(dietaryFilter);
+      });
     }
 
     // Apply category filter
@@ -166,15 +194,11 @@ export default function Home() {
               className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
             >
               <option value="all">All Diets</option>
-              <option value="Vegan">🌱 Vegan</option>
-              <option value="Vegetarian">🥕 Vegetarian</option>
-              <option value="Gluten-Free">🌾 Gluten-Free</option>
-              <option value="Pescetarian">🐟 Pescetarian</option>
-              <option value="Dairy-Free">🥛 Dairy-Free</option>
-              <option value="Nut-Free">🥜 Nut-Free</option>
-              <option value="Keto">🥑 Keto</option>
-              <option value="Paleo">🍖 Paleo</option>
-              <option value="Low-Carb">🥖 Low-Carb</option>
+              {DIET_OPTIONS.map((diet) => (
+                <option key={diet} value={diet}>
+                  {DIET_EMOJI[diet]} {diet}
+                </option>
+              ))}
             </select>
           </div>
 

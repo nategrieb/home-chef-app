@@ -5,7 +5,7 @@
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS category TEXT CHECK (category IN ('Breakfast', 'Lunch', 'Dinner', 'Snack'));
 
 -- Add dietary_preference field (Vegan, Vegetarian, Gluten-Free, etc.)
-ALTER TABLE recipes ADD COLUMN IF NOT EXISTS dietary_preference TEXT CHECK (dietary_preference IN ('Vegan', 'Vegetarian', 'Gluten-Free', 'Pescetarian', 'Dairy-Free', 'Nut-Free', 'Keto', 'Paleo', 'Low-Carb'));
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS dietary_preference TEXT CHECK (dietary_preference IN ('Vegan', 'Vegetarian', 'Gluten-Free', 'Pescetarian', 'Dairy-Free', 'Nut-Free', 'Low-Carb'));
 
 -- Add total_time field (in minutes)
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS total_time INTEGER;

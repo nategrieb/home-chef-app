@@ -14,11 +14,26 @@ interface Recipe {
   category?: string;
   total_time?: number;
   tags?: string[];
-  dietary_preference?: string;
+  dietary_preference?: string | string[];
   ingredients?: Ingredient[];
 }
 
 export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDelete: (id: string) => void }) {
+  const dietaryPreferences = Array.isArray(recipe.dietary_preference)
+    ? recipe.dietary_preference
+    : recipe.dietary_preference
+      ? [recipe.dietary_preference]
+      : [];
+
+  const dietEmoji: Record<string, string> = {
+    Vegan: '🌱',
+    Vegetarian: '🥕',
+    'Gluten-Free': '🌾',
+    Pescetarian: '🐟',
+    'Dairy-Free': '🥛',
+    'Nut-Free': '🥜',
+    'Low-Carb': '🥖',
+  };
 
   return (
     <div className="group relative bg-white rounded-xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
@@ -32,20 +47,13 @@ export default function RecipeCard({ recipe, onDelete }: { recipe: Recipe, onDel
               {recipe.description || "A delicious recipe waiting to be discovered."}
             </p>
             <div className="flex items-center gap-4 text-xs text-slate-500">
-              {recipe.dietary_preference && (
-                <div className="flex items-center gap-1">
-                  <span className="font-medium">
-                    {recipe.dietary_preference === 'Vegan' && '🌱'}
-                    {recipe.dietary_preference === 'Vegetarian' && '🥕'}
-                    {recipe.dietary_preference === 'Gluten-Free' && '🌾'}
-                    {recipe.dietary_preference === 'Pescetarian' && '🐟'}
-                    {recipe.dietary_preference === 'Dairy-Free' && '🥛'}
-                    {recipe.dietary_preference === 'Nut-Free' && '🥜'}
-                    {recipe.dietary_preference === 'Keto' && '🥑'}
-                    {recipe.dietary_preference === 'Paleo' && '🍖'}
-                    {recipe.dietary_preference === 'Low-Carb' && '🥖'}
-                    {recipe.dietary_preference}
-                  </span>
+              {dietaryPreferences.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  {dietaryPreferences.map((diet) => (
+                    <span key={diet} className="font-medium">
+                      {dietEmoji[diet]} {diet}
+                    </span>
+                  ))}
                 </div>
               )}
               {recipe.total_time && (
