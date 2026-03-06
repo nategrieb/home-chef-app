@@ -4,279 +4,133 @@ import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
 import { format, startOfWeek } from 'date-fns';
 
-interface Recipe {
-  id: string;
-  title: string;
-  description?: string;
-  servings?: number;
-  serving_unit?: string;
-}
-
-interface MealPlan {
-  id: string;
-  recipe_id: string;
-  day_of_week: number;
-  recipe?: Recipe;
-}
-
 export default function MealPlan() {
-  const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [mealPlans, setMealPlans] = useState<any[]>([]);
+  const [recipes, setRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRecipe, setSelectedRecipe] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedRecipe, setSelectedRecipe] = useState<string>('');
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
-  // Get the current week starting from Monday (local dates)
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-  // Create local dates without timezone issues
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(weekStart);
     date.setDate(weekStart.getDate() + i);
     return date;
   });
 
-  async function fetchMealPlans() {
-    const { data, error } = await supabase
-      .from('meal_plans')
-      .select(`
-        *,
-        recipe:recipes (*)
-      `)
-      .order('day_of_week');
-
-    if (error) {
-      console.error("Error fetching meal plans:", error);
-    } else {
-      setMealPlans(data || []);
-    }
-  }
-
-  async function fetchRecipes() {
-    const { data, error } = await supabase
-      .from('recipes')
-      .select('*')
-      .order('title');
-
-    if (error) {
-      console.error("Error fetching recipes:", error);
-    } else {
-      setRecipes(data || []);
-    }
+  async function fetchData() {
+    const { data: plans } = await supabase.from('meal_plans').select('*, recipe:recipes(*)').order('day_of_week');
+    const { data: recs } = await supabase.from('recipes').select('*').order('title');
+    setMealPlans(plans || []);
+    setRecipes(recs || []);
     setLoading(false);
   }
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchMealPlans();
-    fetchRecipes();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   async function addMealToPlan(recipeId: string, dayIndex: number) {
-    const { error } = await supabase
-      .from('meal_plans')
-      .insert([{
-        recipe_id: recipeId,
-        day_of_week: dayIndex
-      }]);
-
-    if (error) {
-      console.error("Error adding meal to plan:", error);
-      alert("Error adding meal to plan");
-    } else {
-      fetchMealPlans(); // Refresh the meal plans
-      setSelectedRecipe('');
+    const { error } = await supabase.from('meal_plans').insert([{ recipe_id: recipeId, day_of_week: dayIndex }]);
+    if (!error) {
+      fetchData();
       setSelectedDate('');
+      setSelectedRecipe('');
     }
   }
 
   async function removeMealFromPlan(mealPlanId: string) {
-    const { error } = await supabase
-      .from('meal_plans')
-      .delete()
-      .eq('id', mealPlanId);
-
-    if (error) {
-      console.error("Error removing meal from plan:", error);
-      alert("Error removing meal from plan");
-    } else {
-      fetchMealPlans(); // Refresh the meal plans
-    }
-  }
-
-  const getMealsForDay = (dayIndex: number) => {
-    return mealPlans.filter(plan => plan.day_of_week === dayIndex);
-  };
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-center py-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
-          </div>
-        </div>
-      </main>
-    );
+    setRemovingId(mealPlanId); // Trigger exit animation
+    setTimeout(async () => {
+      await supabase.from('meal_plans').delete().eq('id', mealPlanId);
+      setMealPlans(prev => prev.filter(p => p.id !== mealPlanId));
+      setRemovingId(null);
+    }, 300); // Match animation duration
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors mb-6">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Menu
+    <main className="min-h-screen bg-slate-50 pb-24">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <header className="mb-8 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-slate-900">Weekly Plan</h1>
+          <Link href="/shopping-list" className="bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+            View List
           </Link>
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-4xl font-light text-slate-900 mb-2">Weekly Meal Plan</h1>
-              <p className="text-slate-600">
-                Plan your meals for the week and generate a shopping list.
-              </p>
-            </div>
-            <Link
-              href="/shopping-list"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              Shopping List
-            </Link>
-          </div>
-        </div>
+        </header>
 
-        {/* Weekly Calendar - Mobile Optimized */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4 sm:gap-6 mb-8">
+        <div className="space-y-6">
           {weekDays.map((day, index) => (
-            <div key={index} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-              <div className="text-center mb-4">
-                <h3 className="text-lg font-medium text-slate-900">
-                  {format(day, 'EEE')}
-                </h3>
-                <p className="text-sm text-slate-500">
-                  {format(day, 'MMM d')}
-                </p>
+            <section key={index} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="bg-slate-50 px-6 py-3 border-b border-slate-100 flex justify-between items-center">
+                <h2 className="font-bold text-slate-800">{format(day, 'EEEE')}</h2>
+                <span className="text-xs text-slate-400 uppercase tracking-widest">{format(day, 'MMM d')}</span>
               </div>
 
-              <div className="space-y-3 mb-4">
-                {getMealsForDay(index).map((meal, mealIndex) => (
+              <div className="p-4 space-y-3">
+                {mealPlans.filter(p => p.day_of_week === index).map((meal) => (
                   <div
                     key={meal.id}
-                    className="group relative bg-gradient-to-br from-white to-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden animate-in slide-in-from-bottom-2 fade-in"
-                    style={{
-                      animationDelay: `${mealIndex * 50}ms`,
-                      animationFillMode: 'both'
-                    }}
+                    className={`flex items-center gap-3 transition-all duration-300 transform ${
+                      removingId === meal.id ? "opacity-0 -translate-x-full scale-95" : "opacity-100 translate-x-0 scale-100 animate-in fade-in slide-in-from-right-4"
+                    }`}
                   >
-                    <Link href={`/recipes/${meal.recipe?.id}`} className="block p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-base font-semibold text-slate-900 mb-2 group-hover:text-blue-700 transition-colors line-clamp-2 leading-tight">
-                            {meal.recipe?.title}
-                          </h4>
-                          {meal.recipe?.description && (
-                            <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">
-                              {meal.recipe.description}
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Add slide-out animation before removing
-                            const card = e.currentTarget.closest('.group');
-                            if (card) {
-                              card.classList.add('animate-out', 'slide-out-to-left', 'fade-out');
-                              setTimeout(() => removeMealFromPlan(meal.id), 200);
-                            } else {
-                              removeMealFromPlan(meal.id);
-                            }
-                          }}
-                          className="ml-3 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 rounded-lg transition-all duration-200 opacity-100 md:opacity-0 md:group-hover:opacity-100 touch-manipulation"
-                          aria-label="Remove meal"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
+                    <Link href={`/recipes/${meal.recipe?.id}`} className="flex-1 bg-slate-50 p-4 rounded-xl border border-slate-100 active:bg-slate-100 transition-colors">
+                      <p className="font-bold text-slate-900">{meal.recipe?.title}</p>
+                      <p className="text-xs text-slate-500 line-clamp-1">{meal.recipe?.description}</p>
                     </Link>
+                    
+                    {/* Dedicated Mobile Tap Target for Deletion */}
+                    <button
+                      onClick={() => removeMealFromPlan(meal.id)}
+                      className="h-12 w-12 flex items-center justify-center bg-red-50 text-red-500 rounded-xl active:bg-red-500 active:text-white transition-all shadow-sm"
+                      aria-label="Remove meal"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
-              </div>
 
-              <button
-                onClick={() => {
-                  setSelectedDate(`${index}`);
-                }}
-                className="w-full py-2 px-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200 border border-dashed border-slate-300 hover:border-slate-400"
-              >
-                + Add Meal
-              </button>
-            </div>
+                <button
+                  onClick={() => setSelectedDate(`${index}`)}
+                  className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm font-medium active:border-orange-300 active:text-orange-500 transition-all"
+                >
+                  + Add meal to {format(day, 'EEEE')}
+                </button>
+              </div>
+            </section>
           ))}
         </div>
 
-        {/* Add Meal Modal */}
+        {/* Floating Add Modal */}
         {selectedDate && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-medium text-slate-900 mb-4">
-                Add Meal for {format(weekDays[parseInt(selectedDate)], 'EEEE, MMM d')}
-              </h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Select Recipe
-                  </label>
-                  <select
-                    value={selectedRecipe}
-                    onChange={(e) => setSelectedRecipe(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 bg-white text-slate-900"
-                  >
-                    <option value="">Choose a recipe...</option>
-                    {recipes.map((recipe) => (
-                      <option key={recipe.id} value={recipe.id}>
-                        {recipe.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={() => {
-                      if (selectedRecipe) {
-                        addMealToPlan(selectedRecipe, parseInt(selectedDate));
-                      }
-                    }}
-                    disabled={!selectedRecipe}
-                    className="flex-1 bg-slate-900 text-white py-2 px-4 font-medium rounded-lg hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    Add to Plan
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedDate('');
-                      setSelectedRecipe('');
-                    }}
-                    className="flex-1 bg-white text-slate-700 py-2 px-4 font-medium rounded-lg border border-slate-300 hover:bg-slate-50 transition-all duration-200"
-                  >
-                    Cancel
-                  </button>
-                </div>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+            <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-8 shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+              <h3 className="text-xl font-bold mb-4 text-slate-900">What's for dinner?</h3>
+              <select
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl mb-6 outline-none focus:border-orange-500"
+                value={selectedRecipe}
+                onChange={(e) => setSelectedRecipe(e.target.value)}
+              >
+                <option value="">Select a recipe...</option>
+                {recipes.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
+              </select>
+              <div className="flex gap-4">
+                <button onClick={() => addMealToPlan(selectedRecipe, parseInt(selectedDate))} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform">Add to Plan</button>
+                <button onClick={() => setSelectedDate('')} className="px-6 py-4 text-slate-500 font-bold">Cancel</button>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Navigation Bar for easy access on mobile */}
+      <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md border border-slate-200 px-6 py-3 rounded-full shadow-2xl flex gap-8 z-40">
+        <Link href="/" className="text-xs font-bold uppercase tracking-widest text-slate-400">Home</Link>
+        <Link href="/meal-plan" className="text-xs font-bold uppercase tracking-widest text-orange-600">Plan</Link>
+        <Link href="/shopping-list" className="text-xs font-bold uppercase tracking-widest text-slate-400">List</Link>
+      </footer>
     </main>
   );
 }
