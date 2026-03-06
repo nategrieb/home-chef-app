@@ -43,7 +43,7 @@ export default function ShoppingList() {
       .from('meal_plans')
       .select(`
         *,
-        recipes (
+        recipe:recipes (
           id,
           title,
           ingredients (*)

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { format, startOfWeek, addDays } from 'date-fns';
 
 interface Ingredient {
   item_name: string;
@@ -26,6 +27,8 @@ export default function RecipeDetail() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [showMealPlanModal, setShowMealPlanModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
   // Form state
   const [title, setTitle] = useState('');
@@ -33,6 +36,10 @@ export default function RecipeDetail() {
   const [servingAmount, setServingAmount] = useState<number>(4);
   const [servingUnit, setServingUnit] = useState<string>('servings');
   const [ingredients, setIngredients] = useState([{ item_name: '', amount: 0, unit: 'g' }]);
+
+  // Get the current week starting from Monday
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const servingUnits = [
     'servings',
@@ -142,6 +149,31 @@ export default function RecipeDetail() {
       );
     }
     setIsEditing(false);
+  };
+
+  const addToMealPlan = async (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+
+    try {
+      const { error } = await supabase
+        .from('meal_plans')
+        .insert([{
+          recipe_id: recipeId,
+          planned_date: dateStr
+        }]);
+
+      if (error) {
+        console.error("Error adding to meal plan:", error);
+        alert("Error adding recipe to meal plan. Please make sure the meal_plans table exists in your database.");
+      } else {
+        alert(`Recipe added to meal plan for ${format(date, 'EEEE, MMM d')}!`);
+        setShowMealPlanModal(false);
+        setSelectedDate('');
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      alert("An unexpected error occurred. Please try again.");
+    }
   };
 
   if (loading) {
@@ -418,12 +450,20 @@ export default function RecipeDetail() {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="w-full bg-slate-900 text-white py-3 px-6 font-medium rounded-lg hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Edit Recipe
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="w-full bg-slate-900 text-white py-3 px-6 font-medium rounded-lg hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Edit Recipe
+                  </button>
+                  <button
+                    onClick={() => setShowMealPlanModal(true)}
+                    className="w-full bg-white text-slate-700 py-3 px-6 font-medium rounded-lg border border-slate-300 hover:bg-slate-50 transition-all duration-200"
+                  >
+                    Add to Meal Plan
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -432,6 +472,68 @@ export default function RecipeDetail() {
         {/* Mobile-friendly bottom spacing */}
         <div className="h-8"></div>
       </div>
+
+      {/* Meal Plan Modal */}
+      {showMealPlanModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-medium text-slate-900 mb-4">
+              Add "{recipe?.title}" to Meal Plan
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Select a day this week
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  {weekDays.map((day, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedDate(format(day, 'yyyy-MM-dd'))}
+                      className={`p-3 text-left rounded-lg border transition-all duration-200 ${
+                        selectedDate === format(day, 'yyyy-MM-dd')
+                          ? 'border-slate-500 bg-slate-50'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="font-medium text-slate-900">
+                        {format(day, 'EEEE')}
+                      </div>
+                      <div className="text-sm text-slate-500">
+                        {format(day, 'MMM d, yyyy')}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    if (selectedDate) {
+                      addToMealPlan(new Date(selectedDate));
+                    }
+                  }}
+                  disabled={!selectedDate}
+                  className="flex-1 bg-slate-900 text-white py-2 px-4 font-medium rounded-lg hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                  Add to Plan
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMealPlanModal(false);
+                    setSelectedDate('');
+                  }}
+                  className="flex-1 bg-white text-slate-700 py-2 px-4 font-medium rounded-lg border border-slate-300 hover:bg-slate-50 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

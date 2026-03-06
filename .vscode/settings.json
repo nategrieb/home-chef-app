@@ -3,6 +3,15 @@
         "/^node add-recipe-script\\.js$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "/^node setup-db\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node debug-shopping\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "pkill": true
     }
 }
