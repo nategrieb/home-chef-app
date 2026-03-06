@@ -9,11 +9,12 @@ export default function MobileNav() {
     { name: 'Menu', path: '/' },
     { name: 'List', path: '/shopping-list' },
     { name: 'Plan', path: '/meal-plan' },
+    { name: 'Order', path: '/submit-order' },
     { name: 'Settings', path: '/settings', icon: 'gear' },
   ];
 
   return (
-    <footer className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200 px-8 py-4 rounded-full shadow-2xl flex gap-10 z-50 whitespace-nowrap">
+    <footer className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200 px-5 sm:px-8 py-4 rounded-full shadow-2xl flex gap-5 sm:gap-10 z-50 whitespace-nowrap">
       {navItems.map((item) => {
         const isActive = pathname === item.path;
         return (

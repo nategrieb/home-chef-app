@@ -1,0 +1,308 @@
+"use client";
+
+import { useEffect, useMemo, useState } from 'react';
+import { supabase } from '../../lib/supabase';
+import MobileNav from '../../components/MobileNav';
+
+interface OrderIngredient {
+  item_name: string;
+  amount: string;
+  unit: string;
+}
+
+interface RecipeSummary {
+  id: string;
+  title: string;
+}
+
+export default function SubmitOrderPage() {
+  const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
+  const [selectedRecipeId, setSelectedRecipeId] = useState('');
+  const [orderTitle, setOrderTitle] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
+  const [ingredients, setIngredients] = useState<OrderIngredient[]>([]);
+  const [instructions, setInstructions] = useState<string[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [loadingRecipe, setLoadingRecipe] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+      const [{ data: recipeList }, { data: currentOrder }] = await Promise.all([
+        supabase.from('recipes').select('id, title').order('title'),
+        supabase
+          .from('current_orders')
+          .select('recipe_id, order_title, order_notes, order_ingredients, order_instructions, updated_at')
+          .eq('id', 'current')
+          .maybeSingle(),
+      ]);
+
+      setRecipes((recipeList || []) as RecipeSummary[]);
+
+      if (currentOrder) {
+        setSelectedRecipeId(currentOrder.recipe_id || '');
+        setOrderTitle(currentOrder.order_title || '');
+        setOrderNotes(currentOrder.order_notes || '');
+        setIngredients((currentOrder.order_ingredients as OrderIngredient[]) || []);
+        setInstructions((currentOrder.order_instructions as string[]) || []);
+        setLastUpdated(currentOrder.updated_at || '');
+      }
+
+      setLoading(false);
+    }
+
+    loadData();
+  }, []);
+
+  const selectedRecipeName = useMemo(
+    () => recipes.find((r) => r.id === selectedRecipeId)?.title || 'No recipe selected',
+    [recipes, selectedRecipeId]
+  );
+
+  async function loadFromRecipe() {
+    if (!selectedRecipeId) return;
+
+    setLoadingRecipe(true);
+    const [{ data: recipeData }, { data: ingredientData }] = await Promise.all([
+      supabase
+        .from('recipes')
+        .select('title, description, instructions')
+        .eq('id', selectedRecipeId)
+        .single(),
+      supabase
+        .from('ingredients')
+        .select('item_name, amount, unit')
+        .eq('recipe_id', selectedRecipeId),
+    ]);
+
+    if (!recipeData) {
+      alert('Could not load recipe details.');
+      setLoadingRecipe(false);
+      return;
+    }
+
+    setOrderTitle(recipeData.title || '');
+    setOrderNotes(recipeData.description || '');
+
+    setIngredients(
+      (ingredientData || []).map((row: { item_name: string; amount: number | null; unit: string | null }) => ({
+        item_name: row.item_name || '',
+        amount: row.amount == null ? '' : String(row.amount),
+        unit: row.unit || '',
+      }))
+    );
+
+    setInstructions(Array.isArray(recipeData.instructions) ? recipeData.instructions : []);
+    setLoadingRecipe(false);
+  }
+
+  async function submitOrder() {
+    if (!orderTitle.trim()) {
+      alert('Please add an order title before submitting.');
+      return;
+    }
+
+    setSaving(true);
+    const payload = {
+      id: 'current',
+      recipe_id: selectedRecipeId || null,
+      order_title: orderTitle.trim(),
+      order_notes: orderNotes.trim() || null,
+      order_ingredients: ingredients,
+      order_instructions: instructions,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('current_orders').upsert(payload, { onConflict: 'id' });
+
+    setSaving(false);
+
+    if (error) {
+      alert('Could not submit order. Confirm the current_orders table exists.');
+      return;
+    }
+
+    setLastUpdated(payload.updated_at);
+    alert('Current order updated.');
+  }
+
+  if (loading) {
+    return <div className="p-20 text-center text-slate-900 font-bold">Loading order workspace...</div>;
+  }
+
+  return (
+    <main className="min-h-screen bg-white pb-40 px-6 pt-10">
+      <header className="mb-8">
+        <h1 className="text-4xl font-black text-slate-900 leading-tight tracking-tighter">Submit Order</h1>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Build and save your current order</p>
+      </header>
+
+      <section className="bg-slate-100 rounded-3xl border border-slate-200 p-4 sm:p-6 mb-6 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3">
+          <select
+            value={selectedRecipeId}
+            onChange={(e) => setSelectedRecipeId(e.target.value)}
+            className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 outline-none"
+          >
+            <option value="">Select a recipe to start from...</option>
+            {recipes.map((recipe) => (
+              <option key={recipe.id} value={recipe.id}>
+                {recipe.title}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={loadFromRecipe}
+            disabled={!selectedRecipeId || loadingRecipe}
+            className="bg-[#004225] text-white px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300"
+          >
+            {loadingRecipe ? 'Loading...' : 'Load Recipe'}
+          </button>
+        </div>
+
+        <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          Selected: {selectedRecipeName}
+        </div>
+      </section>
+
+      <section className="bg-slate-50 rounded-3xl border border-slate-200 p-4 sm:p-6 space-y-4">
+        <input
+          value={orderTitle}
+          onChange={(e) => setOrderTitle(e.target.value)}
+          className="w-full bg-white border border-slate-300 p-3 rounded-xl font-bold text-black outline-none"
+          placeholder="Order title"
+          style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+        />
+
+        <textarea
+          value={orderNotes}
+          onChange={(e) => setOrderNotes(e.target.value)}
+          className="w-full bg-white border border-slate-300 p-3 rounded-xl text-black font-medium outline-none min-h-[90px]"
+          placeholder="Order notes or custom requests"
+          style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+        />
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-black uppercase tracking-wider text-slate-700">Ingredients</h2>
+            <button
+              type="button"
+              onClick={() => setIngredients((prev) => [...prev, { item_name: '', amount: '', unit: '' }])}
+              className="text-xs font-black uppercase tracking-wide text-[#004225]"
+            >
+              + Add
+            </button>
+          </div>
+          <div className="space-y-2">
+            {ingredients.map((ing, i) => (
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_72px_72px_auto] gap-2 items-center">
+                <input
+                  value={ing.item_name}
+                  placeholder="Ingredient"
+                  onChange={(e) => {
+                    const next = [...ingredients];
+                    next[i].item_name = e.target.value;
+                    setIngredients(next);
+                  }}
+                  className="w-full min-w-0 bg-white border border-slate-300 p-2.5 rounded-lg font-semibold text-black outline-none"
+                  style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                />
+                <input
+                  value={ing.amount}
+                  placeholder="Qty"
+                  onChange={(e) => {
+                    const next = [...ingredients];
+                    next[i].amount = e.target.value;
+                    setIngredients(next);
+                  }}
+                  className="w-full bg-white border border-slate-300 p-2.5 rounded-lg text-center font-semibold text-black outline-none"
+                  style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                />
+                <input
+                  value={ing.unit}
+                  placeholder="Unit"
+                  onChange={(e) => {
+                    const next = [...ingredients];
+                    next[i].unit = e.target.value;
+                    setIngredients(next);
+                  }}
+                  className="w-full bg-white border border-slate-300 p-2.5 rounded-lg text-center font-semibold text-black outline-none"
+                  style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setIngredients((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="w-8 h-8 rounded-full bg-red-100 text-red-600 font-black"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {ingredients.length === 0 && (
+              <p className="text-sm text-slate-500">No ingredients yet. Load a recipe or add manually.</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-black uppercase tracking-wider text-slate-700">Instructions</h2>
+            <button
+              type="button"
+              onClick={() => setInstructions((prev) => [...prev, ''])}
+              className="text-xs font-black uppercase tracking-wide text-[#004225]"
+            >
+              + Add
+            </button>
+          </div>
+          <div className="space-y-2">
+            {instructions.map((step, i) => (
+              <div key={i} className="flex gap-2">
+                <textarea
+                  value={step}
+                  onChange={(e) => {
+                    const next = [...instructions];
+                    next[i] = e.target.value;
+                    setInstructions(next);
+                  }}
+                  rows={2}
+                  className="flex-1 bg-white border border-slate-300 p-2.5 rounded-lg font-medium text-black outline-none"
+                  style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                  placeholder={`Step ${i + 1}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setInstructions((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="w-8 h-8 rounded-full bg-red-100 text-red-600 font-black shrink-0 mt-2"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {instructions.length === 0 && (
+              <p className="text-sm text-slate-500">No instructions yet. Add custom prep steps.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="pt-2 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={submitOrder}
+            disabled={saving}
+            className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300"
+          >
+            {saving ? 'Submitting...' : 'Submit Current Order'}
+          </button>
+          <p className="text-xs text-slate-500 mt-2">
+            {lastUpdated ? `Last updated: ${new Date(lastUpdated).toLocaleString()}` : 'No submitted order yet.'}
+          </p>
+        </div>
+      </section>
+
+      <MobileNav />
+    </main>
+  );
+}
