@@ -19,7 +19,7 @@ export default function MobileNav() {
           <Link 
             key={item.path} 
             href={item.path} 
-            className={`text-xs font-black uppercase tracking-[0.15em] transition-all active:scale-95 ${
+            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95 ${
               isActive ? 'text-[#004225]' : 'text-slate-400'
             }`}
           >
