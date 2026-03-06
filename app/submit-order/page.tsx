@@ -449,7 +449,7 @@ export default function SubmitOrderPage() {
           <p className="text-sm text-slate-600 font-medium">
             {lastUpdated ? `Last updated: ${new Date(lastUpdated).toLocaleString()}` : 'No submitted order yet.'}
           </p>
-          <p className="text-xs text-slate-500 mt-2">Use the sticky button below to submit updates to your active order.</p>
+          <p className="text-xs text-slate-500 mt-2">Keep pressing that button and the order might come faster, just might.</p>
         </div>
       </section>
 
