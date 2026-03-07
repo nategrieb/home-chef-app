@@ -11,10 +11,18 @@ interface OrderIngredient {
   unit: string;
 }
 
+const LEGACY_ADDITIONAL_COMMENTS_SEPARATOR = '\n\n---\nAdditional Comments:\n';
+
+function normalizeLegacyOrderNotes(rawNotes: string | null | undefined) {
+  if (!rawNotes) return '';
+  return rawNotes.split(LEGACY_ADDITIONAL_COMMENTS_SEPARATOR).filter(Boolean).join('\n\n');
+}
+
 export default function SubmitOrderPage() {
   const router = useRouter();
   const [selectedRecipeId, setSelectedRecipeId] = useState('');
   const [orderTitle, setOrderTitle] = useState('');
+  const [recipeDescription, setRecipeDescription] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   const [ingredients, setIngredients] = useState<OrderIngredient[]>([]);
   const [instructions, setInstructions] = useState<string[]>([]);
@@ -38,10 +46,20 @@ export default function SubmitOrderPage() {
       if (currentOrder) {
         setSelectedRecipeId(currentOrder.recipe_id || '');
         setOrderTitle(currentOrder.order_title || '');
-        setOrderNotes(currentOrder.order_notes || '');
+        setOrderNotes(normalizeLegacyOrderNotes(currentOrder.order_notes || ''));
         setIngredients((currentOrder.order_ingredients as OrderIngredient[]) || []);
         setInstructions((currentOrder.order_instructions as string[]) || []);
         setLastUpdated(currentOrder.updated_at || '');
+
+        if (currentOrder.recipe_id) {
+          const { data: sourceRecipe } = await supabase
+            .from('recipes')
+            .select('description')
+            .eq('id', currentOrder.recipe_id)
+            .maybeSingle();
+
+          setRecipeDescription(sourceRecipe?.description || '');
+        }
       }
 
       setLoading(false);
@@ -155,7 +173,8 @@ export default function SubmitOrderPage() {
 
     setSelectedRecipeId(recipeId);
     setOrderTitle(recipeData.title || '');
-    setOrderNotes(recipeData.description || '');
+    setRecipeDescription(recipeData.description || '');
+    setOrderNotes('');
 
     setIngredients(
       (ingredientData || []).map((row: { item_name: string; amount: number | null; unit: string | null }) => ({
@@ -238,6 +257,7 @@ export default function SubmitOrderPage() {
 
     setSelectedRecipeId('');
     setOrderTitle('');
+    setRecipeDescription('');
     setOrderNotes('');
     setIngredients([]);
     setInstructions([]);
@@ -304,6 +324,13 @@ export default function SubmitOrderPage() {
           </div>
         )}
 
+        {recipeDescription.trim() && (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Recipe Description</p>
+            <p className="text-sm text-slate-700 font-medium whitespace-pre-line">{recipeDescription}</p>
+          </div>
+        )}
+
         <input
           value={orderTitle}
           onChange={(e) => setOrderTitle(e.target.value)}
@@ -316,7 +343,7 @@ export default function SubmitOrderPage() {
           value={orderNotes}
           onChange={(e) => setOrderNotes(e.target.value)}
           className="w-full bg-white border border-slate-300 p-3 rounded-xl text-black font-medium outline-none min-h-[90px] focus:ring-2 focus:ring-[#004225]/30 focus:border-[#004225]"
-          placeholder="Order notes or custom requests"
+          placeholder="Order notes and customization requests"
           style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
         />
 
