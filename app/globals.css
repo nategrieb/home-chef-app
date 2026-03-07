@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-sans: var(--font-body), "Avenir Next", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Monaco, Inconsolata, "Roboto Mono", "Source Code Pro", monospace;
 }
 
@@ -30,6 +30,56 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.brand-mark-triangle {
+  width: 1.5rem;
+  height: 1.5rem;
+  background: linear-gradient(135deg, #166534 0%, #16a34a 100%);
+  clip-path: polygon(50% 6%, 7% 92%, 93% 92%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 1px 3px rgba(6, 78, 59, 0.25);
+}
+
+.quiet-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 140ms ease;
+}
+
+.quiet-action:hover,
+.quiet-action:focus-visible {
+  border-color: rgba(148, 163, 184, 0.8);
+  background: rgba(255, 255, 255, 0.74);
+  color: #0f172a;
+}
+
+.quiet-action:active {
+  transform: scale(0.97);
+}
+
+.quiet-action-line {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.35rem;
+  height: 1px;
+  background: rgba(71, 85, 105, 0.78);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 220ms ease;
+}
+
+.quiet-action:hover .quiet-action-line,
+.quiet-action:focus-visible .quiet-action-line,
+.quiet-action:active .quiet-action-line {
+  transform: scaleX(1);
 }
 
 /* Custom scrollbar */

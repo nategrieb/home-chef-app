@@ -186,8 +186,12 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-b from-white via-white to-slate-100 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
       <header className="flex justify-between items-end mb-10">
         <div>
+          <div className="mb-3 flex items-center gap-3">
+            <div className="brand-mark-triangle" aria-hidden="true" />
+            <p className="text-sm md:text-base font-bold tracking-wider text-zinc-900 uppercase">THE MENU</p>
+          </div>
           <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">Kitchen Menu</p>
-          <h1 className="text-5xl font-black tracking-tighter text-slate-900">The Menu</h1>
+          <h1 className="text-5xl font-black tracking-tighter text-slate-900 uppercase">THE MENU</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">Kitchen of Grieb</p>
         </div>
         <button 
@@ -221,10 +225,11 @@ export default function Home() {
             // Redirect to the edit view
             window.location.href = `/recipes/${recipe.id}?edit=true`;
           }}
-          className="bg-[#004225] text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center font-black text-xl active:scale-95 transition-all hover:bg-[#003319]"
+          className="quiet-action w-12 h-12 rounded-xl text-xl font-black"
           title="Add New Recipe"
         >
           +
+          <span aria-hidden="true" className="quiet-action-line" />
         </button>
       </header>
 
@@ -243,9 +248,10 @@ export default function Home() {
             </div>
             <Link
               href="/submit-order"
-              className="inline-flex items-center justify-center bg-[#004225] text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide"
+              className="quiet-action px-4 py-2.5 rounded-xl text-xs font-black"
             >
               View Order
+              <span aria-hidden="true" className="quiet-action-line" />
             </Link>
           </div>
         </section>
@@ -274,9 +280,10 @@ export default function Home() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowFilters((prev) => !prev)}
-              className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 text-left"
+              className="quiet-action flex-1 rounded-xl px-3 py-2 text-sm font-semibold text-left justify-start"
             >
               Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
+              <span aria-hidden="true" className="quiet-action-line" />
             </button>
             <select
               value={sortBy}
@@ -326,9 +333,10 @@ export default function Home() {
                     setDietaryFilter('all');
                     setCategoryFilter('all');
                   }}
-                  className="text-xs font-bold uppercase tracking-wider text-[#004225]"
+                  className="quiet-action rounded-xl px-3 py-1 text-xs font-bold text-[#004225]"
                 >
                   Clear Filters
+                  <span aria-hidden="true" className="quiet-action-line" />
                 </button>
               )}
             </div>
@@ -380,16 +388,18 @@ export default function Home() {
               <button
                 type="button"
                 onClick={confirmAddToPlan}
-                className="flex-1 bg-[#004225] text-white py-3 rounded-xl text-sm font-black uppercase tracking-wide"
+                className="quiet-action flex-1 rounded-xl py-3 text-sm font-black"
               >
                 Add
+                <span aria-hidden="true" className="quiet-action-line" />
               </button>
               <button
                 type="button"
                 onClick={() => setPendingPlanRecipeId(null)}
-                className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl text-sm font-bold uppercase tracking-wide"
+                className="quiet-action flex-1 rounded-xl py-3 text-sm font-bold"
               >
                 Cancel
+                <span aria-hidden="true" className="quiet-action-line" />
               </button>
             </div>
           </div>

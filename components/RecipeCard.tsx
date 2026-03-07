@@ -93,10 +93,11 @@ export default function RecipeCard({
                 e.stopPropagation();
                 onAddToPlan(recipe.id);
               }}
-              className="px-3 py-2 bg-[#004225] text-white rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#003319] transition-colors"
+              className="quiet-action rounded-lg px-3 py-2 text-xs font-bold"
               aria-label="Add recipe to plan"
             >
               + Plan
+              <span aria-hidden="true" className="quiet-action-line" />
             </button>
             <button
               onClick={(e) => {
@@ -104,10 +105,11 @@ export default function RecipeCard({
                 e.stopPropagation();
                 window.location.href = `/submit-order?recipeId=${recipe.id}&autoload=1`;
               }}
-              className="px-3 py-2 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-emerald-200 transition-colors"
+              className="quiet-action rounded-lg px-3 py-2 text-xs font-bold"
               aria-label="Start order from recipe"
             >
               Order
+              <span aria-hidden="true" className="quiet-action-line" />
             </button>
           </div>
         </div>

@@ -322,16 +322,18 @@ export default function RecipeDetail() {
               <button
                 type="button"
                 onClick={saveChanges}
-                className="w-full sm:w-auto bg-[#004225] text-white px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wide"
+                className="quiet-action w-full sm:w-auto px-4 py-2.5 rounded-xl text-sm font-black"
               >
                 Save Changes
+                <span aria-hidden="true" className="quiet-action-line" />
               </button>
               <button
                 type="button"
                 onClick={cancelEditing}
-                className="w-full sm:w-auto bg-white border border-slate-300 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold uppercase tracking-wide"
+                className="quiet-action w-full sm:w-auto px-4 py-2.5 rounded-xl text-sm font-bold"
               >
                 {recipe?.title === 'New Recipe' ? 'Cancel Draft' : 'Cancel'}
+                <span aria-hidden="true" className="quiet-action-line" />
               </button>
             </div>
           </div>
@@ -417,16 +419,18 @@ export default function RecipeDetail() {
                 <button
                   type="button"
                   onClick={openPlanPicker}
-                  className="w-full sm:w-auto bg-[#004225] text-white px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide hover:bg-[#003319] transition-colors"
+                  className="quiet-action w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-black"
                 >
                   + Add to Plan
+                  <span aria-hidden="true" className="quiet-action-line" />
                 </button>
                 <button
                   type="button"
                   onClick={() => { window.location.href = `/submit-order?recipeId=${params.id}&autoload=1`; }}
-                  className="w-full sm:w-auto bg-emerald-100 text-emerald-800 px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wide hover:bg-emerald-200 transition-colors"
+                  className="quiet-action w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-black"
                 >
                   Order
+                  <span aria-hidden="true" className="quiet-action-line" />
                 </button>
               </div>
 
@@ -453,9 +457,10 @@ export default function RecipeDetail() {
               </div>
 
               {sourceUrl && (
-                <a href={sourceUrl} target="_blank" className="inline-flex items-center gap-2 bg-white text-[#004225] px-5 py-3 rounded-2xl border-2 border-slate-200 font-black uppercase text-xs active:scale-95 transition-all shadow-sm mb-4">
+                <a href={sourceUrl} target="_blank" className="quiet-action inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black mb-4">
                   Source Article
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  <span aria-hidden="true" className="quiet-action-line" />
                 </a>
               )}
               {tags && tags.length > 0 && (
@@ -585,7 +590,10 @@ export default function RecipeDetail() {
               </div>
             ))}
             {isEditing && (
-              <button onClick={() => appendRecipeIngredient(true)} className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors">+ Add Ingredient</button>
+              <button onClick={() => appendRecipeIngredient(true)} className="quiet-action w-full p-4 rounded-2xl text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
+                + Add Ingredient
+                <span aria-hidden="true" className="quiet-action-line" />
+              </button>
             )}
           </div>
         </section>
@@ -625,7 +633,10 @@ export default function RecipeDetail() {
             ))}
             {isEditing && (
               <>
-                <button onClick={() => appendRecipeInstruction(true)} className="w-full bg-slate-100 text-[#004225] font-black text-sm uppercase p-4 rounded-2xl border-2 border-dashed border-slate-300 hover:bg-slate-200 transition-colors">+ Add Step</button>
+                <button onClick={() => appendRecipeInstruction(true)} className="quiet-action w-full p-4 rounded-2xl text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
+                  + Add Step
+                  <span aria-hidden="true" className="quiet-action-line" />
+                </button>
                 <p className="text-xs text-slate-500">Press Return to move to the next step. Use Shift+Return for a line break.</p>
               </>
             )}
@@ -655,16 +666,18 @@ export default function RecipeDetail() {
               <button
                 type="button"
                 onClick={addToPlan}
-                className="flex-1 bg-[#004225] text-white py-3 rounded-xl text-sm font-black uppercase tracking-wide"
+                className="quiet-action flex-1 py-3 rounded-xl text-sm font-black"
               >
                 Add
+                <span aria-hidden="true" className="quiet-action-line" />
               </button>
               <button
                 type="button"
                 onClick={() => setShowPlanPicker(false)}
-                className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl text-sm font-bold uppercase tracking-wide"
+                className="quiet-action flex-1 py-3 rounded-xl text-sm font-bold"
               >
                 Cancel
+                <span aria-hidden="true" className="quiet-action-line" />
               </button>
             </div>
           </div>
