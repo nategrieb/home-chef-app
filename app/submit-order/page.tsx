@@ -267,6 +267,28 @@ export default function SubmitOrderPage() {
   }
 
   const submitLabel = saving ? 'Submitting...' : 'Submit Current Order';
+  const orderStatusCard = (
+    <div className="pt-3 border-t border-slate-200 bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Order Status</p>
+          <p className="text-sm text-slate-600 font-medium">
+            {lastUpdated ? `Last updated: ${new Date(lastUpdated).toLocaleString()}` : 'No submitted order yet.'}
+          </p>
+          <p className="text-xs text-slate-500 mt-2">Submit anytime to update your current order.</p>
+        </div>
+        {hasSubmittedOrder && (
+          <button
+            type="button"
+            onClick={() => setShowClearConfirm(true)}
+            className="shrink-0 rounded-lg border border-red-200 bg-white px-2.5 py-2 text-[11px] sm:text-xs font-black uppercase tracking-wide text-red-700 hover:bg-red-50 transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <main className="min-h-screen bg-white pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
@@ -279,16 +301,20 @@ export default function SubmitOrderPage() {
         <p className="text-sm sm:text-base text-slate-600 mt-2 max-w-2xl">Build your active order, customize details, and submit updates for the kitchen.</p>
       </header>
 
-      <div className="mb-6">
-        <button
-          type="button"
-          onClick={submitOrder}
-          disabled={saving}
-          className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm hover:bg-[#00351d] transition-colors"
-        >
-          {submitLabel}
-        </button>
-      </div>
+      {!hasSubmittedOrder && (
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={submitOrder}
+            disabled={saving}
+            className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm hover:bg-[#00351d] transition-colors"
+          >
+            {submitLabel}
+          </button>
+        </div>
+      )}
+
+      {hasSubmittedOrder && <div className="mb-6">{orderStatusCard}</div>}
 
       <section className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
         <h2 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700">Order Details</h2>
@@ -467,26 +493,7 @@ export default function SubmitOrderPage() {
         </div>
         )}
 
-        <div className="pt-3 border-t border-slate-200 bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Order Status</p>
-              <p className="text-sm text-slate-600 font-medium">
-            {lastUpdated ? `Last updated: ${new Date(lastUpdated).toLocaleString()}` : 'No submitted order yet.'}
-              </p>
-              <p className="text-xs text-slate-500 mt-2">Submit anytime to update your current order.</p>
-            </div>
-            {hasSubmittedOrder && (
-              <button
-                type="button"
-                onClick={() => setShowClearConfirm(true)}
-                className="shrink-0 rounded-lg border border-red-200 bg-white px-2.5 py-2 text-[11px] sm:text-xs font-black uppercase tracking-wide text-red-700 hover:bg-red-50 transition-colors"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
+        {!hasSubmittedOrder && orderStatusCard}
 
         <button
           type="button"

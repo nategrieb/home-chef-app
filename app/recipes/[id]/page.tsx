@@ -419,7 +419,7 @@ export default function RecipeDetail() {
                 <button
                   type="button"
                   onClick={openPlanPicker}
-                  className="quiet-action w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-black"
+                  className="quiet-action quiet-action-cta w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-black"
                 >
                   + Add to Plan
                   <span aria-hidden="true" className="quiet-action-line" />
@@ -427,7 +427,7 @@ export default function RecipeDetail() {
                 <button
                   type="button"
                   onClick={() => { window.location.href = `/submit-order?recipeId=${params.id}&autoload=1`; }}
-                  className="quiet-action w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-black"
+                  className="quiet-action quiet-action-cta w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-black"
                 >
                   Order
                   <span aria-hidden="true" className="quiet-action-line" />

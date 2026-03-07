@@ -93,7 +93,7 @@ export default function RecipeCard({
                 e.stopPropagation();
                 onAddToPlan(recipe.id);
               }}
-              className="quiet-action rounded-lg px-3 py-2 text-xs font-bold"
+              className="quiet-action quiet-action-cta rounded-lg px-3 py-2 text-xs font-bold"
               aria-label="Add recipe to plan"
             >
               + Plan
@@ -105,7 +105,7 @@ export default function RecipeCard({
                 e.stopPropagation();
                 window.location.href = `/submit-order?recipeId=${recipe.id}&autoload=1`;
               }}
-              className="quiet-action rounded-lg px-3 py-2 text-xs font-bold"
+              className="quiet-action quiet-action-cta rounded-lg px-3 py-2 text-xs font-bold"
               aria-label="Start order from recipe"
             >
               Order
