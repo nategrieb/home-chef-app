@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
+import Header from '../../components/Header';
 
 interface IngredientAlias {
   raw_term: string;
@@ -90,7 +91,9 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-white pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
-      <header className="mb-8">
+      <Header />
+
+      <div className="mb-8">
         <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">
           System Settings
         </p>
@@ -100,7 +103,7 @@ export default function SettingsPage() {
         <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">
           Ingredient Grouping
         </p>
-      </header>
+      </div>
 
       <section className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
         <h2 className="text-xs font-black text-slate-700 uppercase tracking-[0.2em] mb-3">

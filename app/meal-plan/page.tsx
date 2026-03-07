@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
 import { format, startOfWeek } from 'date-fns';
 import MobileNav from '../../components/MobileNav';
+import Header from '../../components/Header';
 import { buildShoppingStateKey, inferCanonicalIngredient } from '../../lib/ingredient-normalization';
 
 export default function MealPlan() {
@@ -84,13 +85,15 @@ export default function MealPlan() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-white to-slate-100 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
-      <header className="mb-10">
+      <Header />
+
+      <div className="mb-10">
         <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">
           Weekly Planner
         </p>
         <h1 className="text-4xl font-black text-slate-900 leading-tight tracking-tighter">Weekly Plan</h1>
         <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Kitchen of Grieb</p>
-      </header>
+      </div>
 
       <div className="space-y-6">
         {weekDays.map((day, index) => (

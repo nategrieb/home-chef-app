@@ -3,6 +3,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useParams, useSearchParams } from 'next/navigation';
 import MobileNav from '../../../components/MobileNav';
+import Header from '../../../components/Header';
 import { inferCanonicalIngredient, inferPreparationNote } from '../../../lib/ingredient-normalization';
 
 const DIET_OPTIONS = [
@@ -299,6 +300,8 @@ export default function RecipeDetail() {
   return (
     <main className="min-h-screen bg-white pb-44">
       <div className="max-w-2xl mx-auto px-6 pt-10">
+        <Header />
+
         <header className="mb-8">
           {isEditing ? (
             <input 

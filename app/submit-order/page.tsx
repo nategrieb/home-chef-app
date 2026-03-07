@@ -4,6 +4,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
+import Header from '../../components/Header';
 
 interface OrderIngredient {
   item_name: string;
@@ -293,13 +294,12 @@ export default function SubmitOrderPage() {
   return (
     <main className="min-h-screen bg-white pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
       <div className="max-w-3xl mx-auto">
-      <header className="mb-8">
-        <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">
-          Current Order
-        </p>
+      <Header />
+
+      <div className="mb-8">
         <h1 className="text-4xl sm:text-5xl font-black text-slate-900 leading-tight tracking-tighter">Submit Order</h1>
         <p className="text-sm sm:text-base text-slate-600 mt-2 max-w-2xl">Build your active order, customize details, and submit updates for the kitchen.</p>
-      </header>
+      </div>
 
       {!hasSubmittedOrder && (
         <div className="mb-6">

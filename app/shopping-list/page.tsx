@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
 import { startOfWeek, format } from 'date-fns';
 import MobileNav from '../../components/MobileNav';
+import Header from '../../components/Header';
 import {
   buildShoppingStateKey,
   inferCanonicalIngredient,
@@ -256,7 +257,9 @@ export default function ShoppingList() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-white to-slate-100 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
-      <header className="mb-10">
+      <Header />
+
+      <div className="mb-10">
         <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">
           Weekly Essentials
         </p>
@@ -266,7 +269,7 @@ export default function ShoppingList() {
         <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">
           Week of {format(weekStart, 'MMM d')}
         </p>
-      </header>
+      </div>
 
       {/* Manual Items: separate from recipe ingredients and removable */}
       <section className="mb-8 bg-amber-50 border border-amber-200 rounded-3xl p-4">

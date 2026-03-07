@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import RecipeCard from '../components/RecipeCard';
 import MobileNav from '../components/MobileNav';
+import Header from '../components/Header';
 import { buildShoppingStateKey, inferCanonicalIngredient } from '../lib/ingredient-normalization';
 import Link from 'next/link';
 
@@ -184,14 +185,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-white to-slate-100 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
-      <header className="flex justify-between items-end mb-10">
-        <div>
-          <div className="mb-3 flex items-center gap-3">
-            <div className="brand-mark-triangle" aria-hidden="true" />
-            <p className="text-sm md:text-base font-bold tracking-wider text-zinc-900 uppercase">THE MENU</p>
-          </div>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">Kitchen of Grieb</p>
-        </div>
+      <Header>
         <button 
           onClick={async () => {
             // Create a blank recipe record
@@ -229,7 +223,7 @@ export default function Home() {
           +
           <span aria-hidden="true" className="quiet-action-line" />
         </button>
-      </header>
+      </Header>
 
       {currentOrder && (
         <section className="mb-8 bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
