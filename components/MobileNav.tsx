@@ -14,7 +14,7 @@ export default function MobileNav() {
   ];
 
   return (
-    <footer className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200 px-4 sm:px-7 py-4 rounded-full shadow-2xl flex gap-4 sm:gap-8 z-50 whitespace-nowrap">
+    <footer className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200 px-4 sm:px-6 py-3 rounded-2xl shadow-xl flex gap-4 sm:gap-7 z-50 whitespace-nowrap">
       {navItems.map((item) => {
         const isActive = pathname === item.path;
         return (

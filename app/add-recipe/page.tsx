@@ -43,10 +43,13 @@ export default function AddRecipe() {
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4"></div>
-        <p className="text-slate-600 font-medium">Creating your new recipe...</p>
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/60 flex items-center justify-center px-6">
+      <div className="text-center bg-white border border-slate-200 rounded-3xl shadow-sm px-8 py-10 w-full max-w-sm">
+        <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-4 shadow-sm">
+          New Recipe
+        </p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#004225] mx-auto mb-4"></div>
+        <p className="text-slate-700 font-semibold">Creating your new recipe...</p>
       </div>
     </main>
   );

@@ -183,11 +183,12 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-white pb-40 px-6 pt-10">
-      <header className="flex justify-between items-end mb-12">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/60 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
+      <header className="flex justify-between items-end mb-10">
         <div>
-          <h1 className="text-5xl font-black tracking-tighter text-slate-900 uppercase italic">The Menu</h1>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Kitchen of Grieb</p>
+          <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">Kitchen Menu</p>
+          <h1 className="text-5xl font-black tracking-tighter text-slate-900">The Menu</h1>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">Kitchen of Grieb</p>
         </div>
         <button 
           onClick={async () => {
@@ -220,7 +221,7 @@ export default function Home() {
             // Redirect to the edit view
             window.location.href = `/recipes/${recipe.id}?edit=true`;
           }}
-          className="bg-[#004225] text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center font-black text-xl active:scale-95 transition-all hover:bg-[#003319]"
+          className="bg-[#004225] text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center font-black text-xl active:scale-95 transition-all hover:bg-[#003319]"
           title="Add New Recipe"
         >
           +

@@ -297,7 +297,7 @@ export default function RecipeDetail() {
   if (loading || !recipe) return <div className="p-20 text-center text-slate-900 font-bold">Loading...</div>;
 
   return (
-    <main className="min-h-screen bg-white pb-40">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/60 pb-44">
       <div className="max-w-2xl mx-auto px-6 pt-10">
         <header className="mb-8">
           {isEditing ? (
@@ -511,7 +511,7 @@ export default function RecipeDetail() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            🥕 Ingredients
+            Ingredients
           </button>
           <button
             onClick={() => setActiveTab('instructions')}
@@ -521,7 +521,7 @@ export default function RecipeDetail() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            👨‍🍳 Instructions
+            Instructions
           </button>
         </div>
 

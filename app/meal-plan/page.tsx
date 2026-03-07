@@ -83,10 +83,13 @@ export default function MealPlan() {
   if (loading) return <div className="p-20 text-center text-slate-900 font-bold">Loading Plan...</div>;
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-40 px-6 pt-10">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/60 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
       <header className="mb-10">
+        <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">
+          Weekly Planner
+        </p>
         <h1 className="text-4xl font-black text-slate-900 leading-tight tracking-tighter">Weekly Plan</h1>
-        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Kitchen of Grieb</p>
+        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Kitchen of Grieb</p>
       </header>
 
       <div className="space-y-6">

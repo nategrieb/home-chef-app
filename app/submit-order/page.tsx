@@ -77,11 +77,7 @@ export default function SubmitOrderPage() {
     return () => window.clearTimeout(timer);
   }, [showSuccess, router]);
 
-  const hasActiveOrder =
-    orderTitle.trim().length > 0 ||
-    orderNotes.trim().length > 0 ||
-    ingredients.length > 0 ||
-    instructions.length > 0;
+  const hasSubmittedOrder = Boolean(lastUpdated);
 
   const focusOrderIngredientName = (index: number) => {
     window.requestAnimationFrame(() => {
@@ -270,47 +266,31 @@ export default function SubmitOrderPage() {
     return <div className="p-20 text-center text-slate-900 font-bold">Loading order workspace...</div>;
   }
 
+  const submitLabel = saving ? 'Submitting...' : 'Submit Current Order';
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-32 px-4 sm:px-6 pt-8 sm:pt-10">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/60 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
       <div className="max-w-3xl mx-auto">
       <header className="mb-8">
-        <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3">
+        <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">
           Current Order
         </p>
         <h1 className="text-4xl sm:text-5xl font-black text-slate-900 leading-tight tracking-tighter">Submit Order</h1>
-        <p className="text-sm sm:text-base text-slate-600 mt-2">Build your active order, customize it, and save it for the kitchen.</p>
+        <p className="text-sm sm:text-base text-slate-600 mt-2 max-w-2xl">Build your active order, customize details, and submit updates for the kitchen.</p>
       </header>
-
-      {hasActiveOrder && (
-        <section className="bg-red-50 rounded-3xl border border-red-200 p-4 sm:p-5 mb-6 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-600 mb-1">Active Order</p>
-              <p className="text-sm font-semibold text-red-700">Need to start over? Clear the current order first.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowClearConfirm(true)}
-              className="shrink-0 bg-white border border-red-300 text-red-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wide"
-            >
-              Clear Active Order
-            </button>
-          </div>
-        </section>
-      )}
 
       <div className="mb-6">
         <button
           type="button"
           onClick={submitOrder}
           disabled={saving}
-          className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm"
+          className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm hover:bg-[#00351d] transition-colors"
         >
-          {saving ? 'Submitting...' : 'Submit Current Order'}
+          {submitLabel}
         </button>
       </div>
 
-      <section className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-5">
+      <section className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
         <h2 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700">Order Details</h2>
         {feedback && (
           <div
@@ -357,7 +337,7 @@ export default function SubmitOrderPage() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            🥕 Ingredients
+            Ingredients
           </button>
           <button
             type="button"
@@ -368,7 +348,7 @@ export default function SubmitOrderPage() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            👨‍🍳 Instructions
+            Instructions
           </button>
         </div>
 
@@ -488,20 +468,33 @@ export default function SubmitOrderPage() {
         )}
 
         <div className="pt-3 border-t border-slate-200 bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Order Status</p>
-          <p className="text-sm text-slate-600 font-medium">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">Order Status</p>
+              <p className="text-sm text-slate-600 font-medium">
             {lastUpdated ? `Last updated: ${new Date(lastUpdated).toLocaleString()}` : 'No submitted order yet.'}
-          </p>
-          <p className="text-xs text-slate-500 mt-2">Keep pressing that button and the order might come faster, just might.</p>
+              </p>
+              <p className="text-xs text-slate-500 mt-2">Submit anytime to update your current order.</p>
+            </div>
+            {hasSubmittedOrder && (
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(true)}
+                className="shrink-0 rounded-lg border border-red-200 bg-white px-2.5 py-2 text-[11px] sm:text-xs font-black uppercase tracking-wide text-red-700 hover:bg-red-50 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         <button
           type="button"
           onClick={submitOrder}
           disabled={saving}
-          className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm"
+          className="w-full bg-[#004225] text-white py-3.5 rounded-xl text-sm font-black uppercase tracking-wide disabled:bg-slate-300 shadow-sm hover:bg-[#00351d] transition-colors"
         >
-          {saving ? 'Submitting...' : 'Submit Current Order'}
+          {submitLabel}
         </button>
       </section>
 
@@ -511,8 +504,8 @@ export default function SubmitOrderPage() {
           <div className="order-success-card">
             <div className="order-success-pop">✓</div>
             <p className="text-xl font-black text-slate-900">Your order is in</p>
-            <p className="text-sm text-slate-700 font-semibold">Really proud of you</p>
-            <p className="order-success-sub">So anyhow, see ya later</p>
+            <p className="text-sm text-slate-700 font-semibold">Saved as your current order.</p>
+            <p className="order-success-sub">Returning to menu...</p>
           </div>
         </div>
       )}
