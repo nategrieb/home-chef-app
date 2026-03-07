@@ -94,10 +94,7 @@ export default function SettingsPage() {
       <Header />
 
       <div className="mb-8">
-        <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">
-          System Settings
-        </p>
-        <h1 className="text-4xl font-black text-slate-900 leading-tight tracking-tighter">
+        <h1 className="page-title-brand text-3xl sm:text-4xl">
           Settings
         </h1>
         <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">

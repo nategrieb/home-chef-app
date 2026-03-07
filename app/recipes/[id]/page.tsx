@@ -311,7 +311,7 @@ export default function RecipeDetail() {
               style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
             />
           ) : (
-            <h1 className="text-4xl font-black text-slate-900 leading-tight tracking-tighter">{title}</h1>
+            <h1 className="page-title-brand text-3xl sm:text-4xl">{title}</h1>
           )}
         </header>
 

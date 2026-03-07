@@ -297,7 +297,7 @@ export default function SubmitOrderPage() {
       <Header />
 
       <div className="mb-8">
-        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 leading-tight tracking-tighter">Submit Order</h1>
+        <h1 className="page-title-brand text-3xl sm:text-4xl">Submit Order</h1>
         <p className="text-sm sm:text-base text-slate-600 mt-2 max-w-2xl">Build your active order, customize details, and submit updates for the kitchen.</p>
       </div>
 
