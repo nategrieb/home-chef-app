@@ -43,7 +43,6 @@ export default function Home() {
   const [showFilters, setShowFilters] = useState(false);
   const [dietaryFilter, setDietaryFilter] = useState<'all' | (typeof DIET_OPTIONS)[number]>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical' | 'servings-high' | 'servings-low'>('newest');
   const [pendingPlanRecipeId, setPendingPlanRecipeId] = useState<string | null>(null);
   const [pendingPlanDayIndex, setPendingPlanDayIndex] = useState<number>((new Date().getDay() + 6) % 7);
   const [currentOrder, setCurrentOrder] = useState<CurrentOrder | null>(null);
@@ -108,25 +107,8 @@ export default function Home() {
       filtered = filtered.filter(recipe => recipe.category === categoryFilter);
     }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'oldest':
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'alphabetical':
-          return a.title.localeCompare(b.title);
-        case 'servings-high':
-          return (b.servings || 4) - (a.servings || 4);
-        case 'servings-low':
-          return (a.servings || 4) - (b.servings || 4);
-        case 'newest':
-        default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-    });
-
     setFilteredRecipes(filtered);
-  }, [recipes, searchQuery, dietaryFilter, categoryFilter, sortBy]);
+  }, [recipes, searchQuery, dietaryFilter, categoryFilter]);
 
   const activeFilterCount =
     (dietaryFilter !== 'all' ? 1 : 0) +
@@ -249,91 +231,83 @@ export default function Home() {
         </section>
       )}
 
-      {/* Search and Filter Controls */}
-      <div className="mb-8 space-y-4">
-        {/* Search Bar */}
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-          <input
-            type="text"
-            placeholder="Search recipes, ingredients, or descriptions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-500 font-medium focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
-          />
-        </div>
-
-        {/* Compact Filter + Sort Controls */}
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowFilters((prev) => !prev)}
-              className="quiet-action flex-1 px-3 py-2 text-sm font-semibold text-left justify-start"
-            >
-              Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
-              <span aria-hidden="true" className="quiet-action-line" />
-            </button>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-40 bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
-            >
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="alphabetical">A-Z</option>
-              <option value="servings-high">Servings ↑</option>
-              <option value="servings-low">Servings ↓</option>
-            </select>
-          </div>
-
-          {showFilters && (
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <select
-                  value={dietaryFilter}
-                  onChange={(e) => setDietaryFilter(e.target.value as any)}
-                  className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
-                >
-                  <option value="all">All Diets</option>
-                  {DIET_OPTIONS.map((diet) => (
-                    <option key={diet} value={diet}>
-                      {DIET_EMOJI[diet]} {diet}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value as any)}
-                  className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
-                >
-                  <option value="all">All Meals</option>
-                  <option value="Breakfast">🍳 Breakfast</option>
-                  <option value="Lunch">🥗 Lunch</option>
-                  <option value="Dinner">🍽️ Dinner</option>
-                  <option value="Snack">🍿 Snack</option>
-                </select>
-              </div>
-
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={() => {
-                    setDietaryFilter('all');
-                    setCategoryFilter('all');
-                  }}
-                  className="quiet-action px-3 py-1 text-xs font-bold text-[#004225]"
-                >
-                  Clear Filters
-                  <span aria-hidden="true" className="quiet-action-line" />
-                </button>
-              )}
+      {/* Search + filter row */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
-          )}
+            <input
+              type="text"
+              placeholder="Search recipes, ingredients, or descriptions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-500 font-medium focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+            />
+          </div>
+
+          <button
+            onClick={() => setShowFilters((prev) => !prev)}
+            className="quiet-action flex-none p-2 text-sm font-semibold flex items-center justify-center rounded-full"
+            aria-label="Toggle filters"
+          >
+            {/* filter icon (funnel) */}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5 text-slate-500">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 14.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-6.586L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            <span className="ml-2 hidden sm:inline">
+              Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
+            </span>
+            <span aria-hidden="true" className="quiet-action-line" />
+          </button>
         </div>
+
+        {showFilters && (
+          <div className="mt-3 bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <select
+                value={dietaryFilter}
+                onChange={(e) => setDietaryFilter(e.target.value as any)}
+                className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+              >
+                <option value="all">All Diets</option>
+                {DIET_OPTIONS.map((diet) => (
+                  <option key={diet} value={diet}>
+                    {DIET_EMOJI[diet]} {diet}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value as any)}
+                className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+              >
+                <option value="all">All Meals</option>
+                <option value="Breakfast">🍳 Breakfast</option>
+                <option value="Lunch">🥗 Lunch</option>
+                <option value="Dinner">🍽️ Dinner</option>
+                <option value="Snack">🍿 Snack</option>
+              </select>
+            </div>
+
+            {activeFilterCount > 0 && (
+              <button
+                onClick={() => {
+                  setDietaryFilter('all');
+                  setCategoryFilter('all');
+                }}
+                className="quiet-action px-3 py-1 text-xs font-bold text-[#004225]"
+              >
+                Clear Filters
+                <span aria-hidden="true" className="quiet-action-line" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {loading ? (

@@ -20,6 +20,9 @@
         "/^node check-db\\.js$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "git remote": true,
+        "git add": true,
+        "git push": true
     }
 }
