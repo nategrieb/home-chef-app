@@ -32,6 +32,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Keep controls crisp: buttons are square, inputs/selects can stay rounded. */
+button {
+  border-radius: 0 !important;
+}
+
 .brand-mark-triangle {
   width: 1.5rem;
   height: 1.5rem;
@@ -46,6 +51,7 @@ body {
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
+  border-radius: 0 !important;
   background: transparent;
   color: #334155;
   text-transform: uppercase;
@@ -85,21 +91,6 @@ body {
 .quiet-action:focus-visible .quiet-action-line,
 .quiet-action:active .quiet-action-line {
   transform: scaleX(1);
-}
-
-/* CTA variant: still minimal, but visibly interactive at rest. */
-.quiet-action-cta {
-  border-color: rgba(148, 163, 184, 0.42);
-  background: rgba(255, 255, 255, 0.7);
-  color: #0f172a;
-  min-height: 2.5rem;
-}
-
-.quiet-action-cta:hover,
-.quiet-action-cta:focus-visible {
-  border-color: rgba(0, 66, 37, 0.46);
-  background: rgba(236, 253, 245, 0.74);
-  color: #004225;
 }
 
 /* Custom scrollbar */
