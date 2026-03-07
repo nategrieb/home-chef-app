@@ -89,7 +89,7 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/60 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
+    <main className="min-h-screen bg-white pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
       <header className="mb-8">
         <p className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-[0.2em] mb-3 shadow-sm">
           System Settings
