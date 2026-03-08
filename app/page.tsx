@@ -235,55 +235,53 @@ export default function Home() {
         </section>
       )}
 
-      {/* Unified search, filter, and sort bar */}
-      <div className="mb-8 bg-slate-100 border border-zinc-100 p-4 rounded-none">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          {/* Search input */}
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Search recipes, ingredients, or descriptions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border border-transparent text-zinc-900 placeholder-zinc-500 font-medium rounded-none focus:outline-none hover:border-zinc-300/80 hover:bg-white/70 focus:border-zinc-300/80 focus:bg-white/70 active:scale-95 transition-all duration-200"
-            />
-          </div>
+      {/* Search + filter toolbar */}
+      <div className="mb-8 border-y border-zinc-200">
+        {/* Search row */}
+        <div className="flex items-center border-b border-zinc-200">
+          <svg className="shrink-0 ml-4 h-4 w-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search recipes, ingredients, or descriptions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-3 bg-transparent text-zinc-900 placeholder-zinc-400 font-medium text-sm focus:outline-none"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="shrink-0 mr-3 px-2 py-1 text-zinc-400 hover:text-zinc-700 text-lg leading-none transition-colors">×</button>
+          )}
+        </div>
 
+        {/* Filters row — horizontally scrollable on mobile, flex on desktop */}
+        <div className="flex items-stretch overflow-x-auto scrollbar-hide divide-x divide-zinc-200 text-sm font-medium">
           {/* Diet filter */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <select
               value={dietaryFilter}
               onChange={(e) => setDietaryFilter(e.target.value as any)}
-              className="appearance-none bg-white border border-transparent px-4 py-3 text-zinc-500 font-medium rounded-none hover:border-zinc-300/80 hover:bg-white/70 focus:border-zinc-300/80 focus:bg-white/70 active:scale-95 transition-all duration-200 pr-8"
+              className="appearance-none h-full bg-transparent pl-4 pr-8 py-3 text-zinc-500 focus:outline-none cursor-pointer hover:text-zinc-900 transition-colors whitespace-nowrap"
+              style={{ minWidth: 'max-content' }}
             >
               <option value="all">All Diets</option>
               {DIET_OPTIONS.map((diet) => (
-                <option key={diet} value={diet}>
-                  {DIET_EMOJI[diet]} {diet}
-                </option>
+                <option key={diet} value={diet}>{DIET_EMOJI[diet]} {diet}</option>
               ))}
             </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-4 w-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-            {dietaryFilter !== 'all' && (
-              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-zinc-900 transform scale-x-100 transition-transform duration-200" />
-            )}
+            <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+            </svg>
+            {dietaryFilter !== 'all' && <span className="absolute bottom-0 left-4 right-8 h-0.5 bg-zinc-900" />}
           </div>
 
           {/* Meal filter */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as any)}
-              className="appearance-none bg-white border border-transparent px-4 py-3 text-zinc-500 font-medium rounded-none hover:border-zinc-300/80 hover:bg-white/70 focus:border-zinc-300/80 focus:bg-white/70 active:scale-95 transition-all duration-200 pr-8"
+              className="appearance-none h-full bg-transparent pl-4 pr-8 py-3 text-zinc-500 focus:outline-none cursor-pointer hover:text-zinc-900 transition-colors whitespace-nowrap"
+              style={{ minWidth: 'max-content' }}
             >
               <option value="all">All Meals</option>
               <option value="Breakfast">🍳 Breakfast</option>
@@ -291,24 +289,32 @@ export default function Home() {
               <option value="Dinner">🍽️ Dinner</option>
               <option value="Snack">🍿 Snack</option>
             </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="h-4 w-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-            {categoryFilter !== 'all' && (
-              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-zinc-900 transform scale-x-100 transition-transform duration-200" />
-            )}
+            <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+            </svg>
+            {categoryFilter !== 'all' && <span className="absolute bottom-0 left-4 right-8 h-0.5 bg-zinc-900" />}
           </div>
 
-          {/* Sort button */}
+          {/* Sort toggle */}
           <button
-            onClick={() => setSortDirection(d => (d === 'newest' ? 'oldest' : 'newest'))}
-            className="relative bg-white border border-transparent px-4 py-3 text-zinc-500 font-medium rounded-none hover:border-zinc-300/80 hover:bg-white/70 focus:border-zinc-300/80 focus:bg-white/70 active:scale-95 transition-all duration-200"
+            onClick={() => setSortDirection(d => d === 'newest' ? 'oldest' : 'newest')}
+            className="relative shrink-0 flex items-center gap-1.5 px-4 py-3 text-zinc-500 hover:text-zinc-900 transition-colors whitespace-nowrap bg-transparent"
           >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'newest' ? "M3 4h13M3 8h9M3 12h5" : "M3 4h5M3 8h9M3 12h13"} />
+            </svg>
             {sortDirection === 'newest' ? 'Newest' : 'Oldest'}
-            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-zinc-900 transform scale-x-0 hover:scale-x-100 transition-transform duration-200" />
           </button>
+
+          {/* Active filter count badge — shows when any filter is set */}
+          {(dietaryFilter !== 'all' || categoryFilter !== 'all') && (
+            <button
+              onClick={() => { setDietaryFilter('all'); setCategoryFilter('all'); }}
+              className="shrink-0 flex items-center gap-1.5 px-4 py-3 text-zinc-400 hover:text-zinc-700 transition-colors whitespace-nowrap bg-transparent text-xs uppercase tracking-widest"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 

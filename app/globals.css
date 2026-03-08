@@ -101,6 +101,15 @@ button {
   transform: scaleX(1);
 }
 
+/* Hide scrollbar utility (used for horizontal filter scroll on mobile) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
