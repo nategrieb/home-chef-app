@@ -243,7 +243,7 @@ export default function Home() {
 
       {/* Search + filter row */}
       <div className="mb-8">
-        <div className="flex items-center gap-2">
+        <div className="relative flex items-center gap-2">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -290,6 +290,77 @@ export default function Home() {
             </span>
             <span aria-hidden="true" className="quiet-action-line" />
           </button>
+
+          {/* sort popover */}
+          {showSort && (
+            <div className="absolute top-full right-0 mt-1 w-36 bg-slate-50 border border-slate-200 rounded-2xl shadow-md p-2 space-y-1">
+              <button
+                onClick={() => {
+                  setSortBy('newest');
+                  setShowSort(false);
+                }}
+                className={`w-full text-left text-sm text-slate-700 py-1 ${sortBy === 'newest' ? 'font-bold' : ''}`}
+              >
+                Newest first
+              </button>
+              <button
+                onClick={() => {
+                  setSortBy('alphabetical');
+                  setShowSort(false);
+                }}
+                className={`w-full text-left text-sm text-slate-700 py-1 ${sortBy === 'alphabetical' ? 'font-bold' : ''}`}
+              >
+                A‑Z
+              </button>
+            </div>
+          )}
+
+          {/* filter popover */}
+          {showFilters && (
+            <div className="absolute top-full right-0 mt-1 w-40 bg-slate-50 border border-slate-200 rounded-2xl shadow-md p-2 space-y-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Diet</label>
+                <select
+                  value={dietaryFilter}
+                  onChange={(e) => setDietaryFilter(e.target.value as any)}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+                >
+                  <option value="all">All Diets</option>
+                  {DIET_OPTIONS.map((diet) => (
+                    <option key={diet} value={diet}>
+                      {DIET_EMOJI[diet]} {diet}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Meal</label>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value as any)}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+                >
+                  <option value="all">All Meals</option>
+                  <option value="Breakfast">🍳 Breakfast</option>
+                  <option value="Lunch">🥗 Lunch</option>
+                  <option value="Dinner">🍽️ Dinner</option>
+                  <option value="Snack">🍿 Snack</option>
+                </select>
+              </div>
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={() => {
+                    setDietaryFilter('all');
+                    setCategoryFilter('all');
+                  }}
+                  className="quiet-action px-3 py-1 text-xs font-bold text-[#004225]"
+                >
+                  Clear Filters
+                  <span aria-hidden="true" className="quiet-action-line" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {showSort && (
