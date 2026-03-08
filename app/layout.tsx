@@ -23,7 +23,7 @@ export default function RootLayout({
         <main className="flex-grow">
           {children}
         </main>
-        <footer className="py-4 text-center text-xs text-slate-500">
+        <footer className="sm:hidden py-4 text-center text-xs text-slate-500">
           <a
             href="https://nategrieb.com"
             target="_blank"
