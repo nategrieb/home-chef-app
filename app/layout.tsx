@@ -8,7 +8,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "THE MENU",
+  title: "∆ THE MENU",
   description: "Home Chef app",
   icons: {
     icon: '/triangle.svg',
