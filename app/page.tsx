@@ -41,8 +41,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showSort, setShowSort] = useState(false);
   const [dietaryFilter, setDietaryFilter] = useState<'all' | (typeof DIET_OPTIONS)[number]>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'alphabetical'>('newest');
   const [pendingPlanRecipeId, setPendingPlanRecipeId] = useState<string | null>(null);
   const [pendingPlanDayIndex, setPendingPlanDayIndex] = useState<number>((new Date().getDay() + 6) % 7);
   const [currentOrder, setCurrentOrder] = useState<CurrentOrder | null>(null);
@@ -107,8 +109,16 @@ export default function Home() {
       filtered = filtered.filter(recipe => recipe.category === categoryFilter);
     }
 
+    // apply sort
+    if (sortBy === 'alphabetical') {
+      filtered.sort((a, b) => a.title.localeCompare(b.title));
+    } else {
+      // newest first
+      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+
     setFilteredRecipes(filtered);
-  }, [recipes, searchQuery, dietaryFilter, categoryFilter]);
+  }, [recipes, searchQuery, dietaryFilter, categoryFilter, sortBy]);
 
   const activeFilterCount =
     (dietaryFilter !== 'all' ? 1 : 0) +
@@ -250,7 +260,24 @@ export default function Home() {
           </div>
 
           <button
-            onClick={() => setShowFilters((prev) => !prev)}
+            onClick={() => {
+              setShowFilters(false);
+              setShowSort(prev => !prev);
+            }}
+            className="quiet-action flex-none p-2 text-sm font-semibold flex items-center justify-center rounded-full"
+            aria-label="Toggle sort options"
+          >
+            {/* sort icon (vertical arrows) */}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" className="h-5 w-5 text-slate-500">
+              <path d="M5 7l5-5 5 5H5zm0 6l5 5 5-5H5z" />
+            </svg>
+          </button>
+
+          <button
+            onClick={() => {
+              setShowSort(false);
+              setShowFilters((prev) => !prev);
+            }}
             className="quiet-action flex-none p-2 text-sm font-semibold flex items-center justify-center rounded-full"
             aria-label="Toggle filters"
           >
@@ -264,6 +291,29 @@ export default function Home() {
             <span aria-hidden="true" className="quiet-action-line" />
           </button>
         </div>
+
+        {showSort && (
+          <div className="mt-3 bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-2">
+            <button
+              onClick={() => {
+                setSortBy('newest');
+                setShowSort(false);
+              }}
+              className={`w-full text-left text-sm py-2 ${sortBy === 'newest' ? 'font-bold' : ''}`}
+            >
+              Newest first
+            </button>
+            <button
+              onClick={() => {
+                setSortBy('alphabetical');
+                setShowSort(false);
+              }}
+              className={`w-full text-left text-sm py-2 ${sortBy === 'alphabetical' ? 'font-bold' : ''}`}
+            >
+              A‑Z
+            </button>
+          </div>
+        )}
 
         {showFilters && (
           <div className="mt-3 bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3">
