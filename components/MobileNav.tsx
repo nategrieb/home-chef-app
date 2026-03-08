@@ -65,7 +65,7 @@ export default function MobileNav() {
           href="https://nategrieb.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="underline hover:text-slate-700 text-sm font-bold tracking-wider uppercase"
+          className="hover:text-slate-700 text-sm font-bold tracking-wider uppercase"
         >
           NATE GRIEB
         </a>
