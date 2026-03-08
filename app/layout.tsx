@@ -10,6 +10,9 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "THE MENU",
   description: "Home Chef app",
+  icons: {
+    icon: '/triangle.svg',
+  },
 };
 
 export default function RootLayout({
@@ -19,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${manrope.variable} antialiased flex flex-col min-h-screen`}>
+      <body className={`${manrope.variable} antialiased flex flex-col min-h-screen`}> 
         <main className="flex-grow">
           {children}
         </main>
