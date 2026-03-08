@@ -317,11 +317,12 @@ export default function Home() {
 
         {showFilters && (
           <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl p-2 space-y-2 max-w-[16rem]">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Diet</label>
               <select
                 value={dietaryFilter}
                 onChange={(e) => setDietaryFilter(e.target.value as any)}
-                className="bg-white border border-slate-300 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+                className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
               >
                 <option value="all">All Diets</option>
                 {DIET_OPTIONS.map((diet) => (
@@ -330,11 +331,13 @@ export default function Home() {
                   </option>
                 ))}
               </select>
-
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Meal</label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as any)}
-                className="bg-white border border-slate-300 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+                className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
               >
                 <option value="all">All Meals</option>
                 <option value="Breakfast">🍳 Breakfast</option>
