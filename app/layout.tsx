@@ -19,8 +19,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${manrope.variable} antialiased`}>
-        {children}
+      <body className={`${manrope.variable} antialiased flex flex-col min-h-screen`}>
+        <main className="flex-grow">
+          {children}
+        </main>
+        <footer className="py-4 text-center text-xs text-slate-500">
+          <a
+            href="https://nategrieb.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-slate-700"
+          >
+            nategrieb.com
+          </a>
+        </footer>
       </body>
     </html>
   );
