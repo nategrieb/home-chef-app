@@ -286,7 +286,7 @@ export default function Home() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 14.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-6.586L3.293 6.707A1 1 0 013 6V4z" />
             </svg>
             <span className="ml-2 hidden sm:inline">
-              Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
+              {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
             </span>
             <span aria-hidden="true" className="quiet-action-line" />
           </button>
@@ -299,7 +299,7 @@ export default function Home() {
                 setSortBy('newest');
                 setShowSort(false);
               }}
-              className={`w-full text-left text-sm py-2 ${sortBy === 'newest' ? 'font-bold' : ''}`}
+              className={`w-full text-left text-sm text-slate-700 py-2 ${sortBy === 'newest' ? 'font-bold' : ''}`}
             >
               Newest first
             </button>
@@ -308,7 +308,7 @@ export default function Home() {
                 setSortBy('alphabetical');
                 setShowSort(false);
               }}
-              className={`w-full text-left text-sm py-2 ${sortBy === 'alphabetical' ? 'font-bold' : ''}`}
+              className={`w-full text-left text-sm text-slate-700 py-2 ${sortBy === 'alphabetical' ? 'font-bold' : ''}`}
             >
               A‑Z
             </button>
