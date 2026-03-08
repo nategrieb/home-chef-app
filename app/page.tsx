@@ -293,13 +293,13 @@ export default function Home() {
         </div>
 
         {showSort && (
-          <div className="mt-3 bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-2">
+          <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl p-2 space-y-1 max-w-[12rem]">
             <button
               onClick={() => {
                 setSortBy('newest');
                 setShowSort(false);
               }}
-              className={`w-full text-left text-sm text-slate-700 py-2 ${sortBy === 'newest' ? 'font-bold' : ''}`}
+              className={`w-full text-left text-sm text-slate-700 py-1 ${sortBy === 'newest' ? 'font-bold' : ''}`}
             >
               Newest first
             </button>
@@ -308,7 +308,7 @@ export default function Home() {
                 setSortBy('alphabetical');
                 setShowSort(false);
               }}
-              className={`w-full text-left text-sm text-slate-700 py-2 ${sortBy === 'alphabetical' ? 'font-bold' : ''}`}
+              className={`w-full text-left text-sm text-slate-700 py-1 ${sortBy === 'alphabetical' ? 'font-bold' : ''}`}
             >
               A‑Z
             </button>
@@ -316,12 +316,12 @@ export default function Home() {
         )}
 
         {showFilters && (
-          <div className="mt-3 bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl p-2 space-y-2 max-w-[16rem]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <select
                 value={dietaryFilter}
                 onChange={(e) => setDietaryFilter(e.target.value as any)}
-                className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+                className="bg-white border border-slate-300 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
               >
                 <option value="all">All Diets</option>
                 {DIET_OPTIONS.map((diet) => (
@@ -334,7 +334,7 @@ export default function Home() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as any)}
-                className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
+                className="bg-white border border-slate-300 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
               >
                 <option value="all">All Meals</option>
                 <option value="Breakfast">🍳 Breakfast</option>
