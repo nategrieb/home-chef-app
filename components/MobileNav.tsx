@@ -13,11 +13,6 @@ export default function MobileNav() {
     { name: 'Settings', path: '/settings' },
   ];
 
-  // external link for desktop nav
-  const extraItems = [
-    { name: 'Nate', href: 'https://nategrieb.com' },
-  ];
-
   return (
     <>
       <footer className="sm:hidden fixed bottom-4 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-2 rounded-2xl shadow-xl z-50 whitespace-nowrap">
@@ -61,20 +56,20 @@ export default function MobileNav() {
               </Link>
             );
           })}
-          {/* desktop-only external link */}
-          {extraItems.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-[0.14em] transition-colors text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-transparent"
-            >
-              {item.name}
-            </a>
-          ))}
         </div>
       </nav>
+
+      {/* signature link for desktop, outside menu */}
+      <div className="hidden sm:block text-center text-xs text-slate-500 py-2">
+        <a
+          href="https://nategrieb.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-slate-700"
+        >
+          nategrieb.com
+        </a>
+      </div>
     </>
   );
 }
