@@ -41,10 +41,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [showSort, setShowSort] = useState(false);
   const [dietaryFilter, setDietaryFilter] = useState<'all' | (typeof DIET_OPTIONS)[number]>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'alphabetical'>('newest');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [pendingPlanRecipeId, setPendingPlanRecipeId] = useState<string | null>(null);
   const [pendingPlanDayIndex, setPendingPlanDayIndex] = useState<number>((new Date().getDay() + 6) % 7);
   const [currentOrder, setCurrentOrder] = useState<CurrentOrder | null>(null);
@@ -259,25 +259,38 @@ export default function Home() {
             />
           </div>
 
-          <button
-            onClick={() => {
-              setShowFilters(false);
-              setShowSort(prev => !prev);
-            }}
-            className="quiet-action flex-none p-2 text-sm font-semibold flex items-center justify-center rounded-full"
-            aria-label="Toggle sort options"
-          >
-            {/* sort icon (vertical arrows) */}
-            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" className="h-5 w-5 text-slate-500">
-              <path d="M5 7l5-5 5 5H5zm0 6l5 5 5-5H5z" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setSortDirection(d => (d === 'desc' ? 'asc' : 'desc'))}
+              className="quiet-action p-2 flex items-center justify-center rounded-full"
+              aria-label="Toggle sort direction"
+            >
+              {sortDirection === 'desc' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" className="h-5 w-5 text-slate-500">
+                  <path d="M5 7l5-5 5 5H5z" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" className="h-5 w-5 text-slate-500">
+                  <path d="M5 13l5 5 5-5H5z" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={() => setSortBy('newest')}
+              className={`text-sm font-medium ${sortBy === 'newest' ? 'text-slate-900' : 'text-slate-500'}`}
+            >
+              Newest
+            </button>
+            <button
+              onClick={() => setSortBy('alphabetical')}
+              className={`text-sm font-medium ${sortBy === 'alphabetical' ? 'text-slate-900' : 'text-slate-500'}`}
+            >
+              A‑Z
+            </button>
+          </div>
 
           <button
-            onClick={() => {
-              setShowSort(false);
-              setShowFilters((prev) => !prev);
-            }}
+            onClick={() => setShowFilters(prev => !prev)}
             className="quiet-action flex-none p-2 text-sm font-semibold flex items-center justify-center rounded-full"
             aria-label="Toggle filters"
           >
@@ -291,29 +304,6 @@ export default function Home() {
             <span aria-hidden="true" className="quiet-action-line" />
           </button>
 
-          {/* sort popover */}
-          {showSort && (
-            <div className="absolute top-full right-0 mt-1 w-36 bg-slate-50 border border-slate-200 rounded-2xl shadow-md p-2 space-y-1">
-              <button
-                onClick={() => {
-                  setSortBy('newest');
-                  setShowSort(false);
-                }}
-                className={`w-full text-left text-sm text-slate-700 py-1 ${sortBy === 'newest' ? 'font-bold' : ''}`}
-              >
-                Newest first
-              </button>
-              <button
-                onClick={() => {
-                  setSortBy('alphabetical');
-                  setShowSort(false);
-                }}
-                className={`w-full text-left text-sm text-slate-700 py-1 ${sortBy === 'alphabetical' ? 'font-bold' : ''}`}
-              >
-                A‑Z
-              </button>
-            </div>
-          )}
 
           {/* filter popover */}
           {showFilters && (
@@ -363,48 +353,7 @@ export default function Home() {
           )}
         </div>
 
-        {showSort && (
-          <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl p-2 space-y-1 max-w-[12rem]">
-            <button
-              onClick={() => {
-                setSortBy('newest');
-                setShowSort(false);
-              }}
-              className={`w-full text-left text-sm text-slate-700 py-1 ${sortBy === 'newest' ? 'font-bold' : ''}`}
-            >
-              Newest first
-            </button>
-            <button
-              onClick={() => {
-                setSortBy('alphabetical');
-                setShowSort(false);
-              }}
-              className={`w-full text-left text-sm text-slate-700 py-1 ${sortBy === 'alphabetical' ? 'font-bold' : ''}`}
-            >
-              A‑Z
-            </button>
-          </div>
-        )}
 
-        {showFilters && (
-          <div className="mt-2 bg-slate-50 border border-slate-200 rounded-2xl p-2 space-y-2 max-w-[16rem]">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Diet</label>
-              <select
-                value={dietaryFilter}
-                onChange={(e) => setDietaryFilter(e.target.value as any)}
-                className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004225] focus:border-transparent"
-              >
-                <option value="all">All Diets</option>
-                {DIET_OPTIONS.map((diet) => (
-                  <option key={diet} value={diet}>
-                    {DIET_EMOJI[diet]} {diet}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Meal</label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as any)}
