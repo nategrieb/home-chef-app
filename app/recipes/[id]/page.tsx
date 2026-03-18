@@ -55,6 +55,7 @@ export default function RecipeDetail() {
   const [planDayIndex, setPlanDayIndex] = useState<number>((new Date().getDay() + 6) % 7);
   const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [showUtilityMenu, setShowUtilityMenu] = useState(false);
+  const [copiedForCronometer, setCopiedForCronometer] = useState(false);
 
   const hydrateForm = (data: any) => {
     setTitle(data.title || '');
@@ -252,6 +253,52 @@ export default function RecipeDetail() {
     setShowPlanPicker(true);
   };
 
+  const handleCopyForCronometer = async () => {
+    const ingredientLines = ingredients
+      .filter((ing) => ing.item_name?.trim())
+      .map((ing) => {
+        const amountPart =
+          typeof ing.amount === 'number'
+            ? ing.amount > 0
+              ? String(ing.amount)
+              : ''
+            : String(ing.amount ?? '').trim();
+        const unitPart = String(ing.unit ?? '').trim();
+        const itemNamePart = String(ing.item_name ?? '').trim();
+        return [amountPart, unitPart, itemNamePart].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      })
+      .filter(Boolean);
+
+    if (!ingredientLines.length) {
+      alert('No ingredients available to copy yet.');
+      return;
+    }
+
+    const payload = ingredientLines.join('\n');
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(payload);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = payload;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+
+      setCopiedForCronometer(true);
+      window.setTimeout(() => setCopiedForCronometer(false), 1500);
+    } catch (error) {
+      console.error('Error copying ingredient list:', error);
+      alert('Could not copy ingredients. Please try again.');
+    }
+  };
+
   const deleteRecipeRecord = async () => {
     if (!confirm(`Delete \"${title}\" permanently?`)) return;
 
@@ -373,6 +420,13 @@ export default function RecipeDetail() {
                       className="w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
                     >
                       Edit Recipe
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyForCronometer}
+                      className="w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+                    >
+                      {copiedForCronometer ? 'COPIED' : 'Copy for Cronometer'}
                     </button>
                     <button
                       type="button"
@@ -591,7 +645,7 @@ export default function RecipeDetail() {
               )}
 
               {/* Balanced Action Row */}
-              <div className="mb-12 flex items-stretch gap-3">
+              <div className="mb-12 grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={openPlanPicker}
