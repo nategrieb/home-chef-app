@@ -345,7 +345,7 @@ export default function RecipeDetail() {
                   <span aria-hidden="true" className="quiet-action-line" />
                 </button>
                 {showUtilityMenu && (
-                  <div className="absolute right-0 top-full mt-2 w-44 rounded-xl border border-slate-200 bg-white shadow-lg p-1.5">
+                  <div className="absolute right-0 top-full mt-2 w-44 rounded-none border border-slate-200 bg-white p-1.5">
                     <button
                       type="button"
                       onClick={startEditing}
@@ -372,7 +372,7 @@ export default function RecipeDetail() {
         <Header />
 
         {showRecipeImage ? (
-          <div className="mb-6 overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 shadow-sm">
+          <div className="mb-6 overflow-hidden rounded-none border border-slate-200 bg-slate-100">
             <img
               src={resolvedImageUrl}
               alt={title || 'Recipe image'}
@@ -381,8 +381,8 @@ export default function RecipeDetail() {
             />
           </div>
         ) : (
-          <div className="mb-6 flex h-[180px] items-end rounded-[2rem] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top_left,#fef3c7,transparent_38%),linear-gradient(135deg,#f8fafc_0%,#eff6ff_48%,#ecfccb_100%)] p-5 sm:h-[220px]">
-            <div className="rounded-2xl bg-white/80 px-4 py-3 shadow-sm backdrop-blur-sm">
+          <div className="mb-6 flex h-[180px] items-end rounded-none border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top_left,#fef3c7,transparent_38%),linear-gradient(135deg,#f8fafc_0%,#eff6ff_48%,#ecfccb_100%)] p-5 sm:h-[220px]">
+            <div className="rounded-none bg-white/80 px-4 py-3 backdrop-blur-sm">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Recipe Photo</p>
               <p className="mt-1 text-sm font-semibold text-slate-700">
                 {isEditing ? 'Paste an image URL below to preview it here.' : 'Add an image URL to show a hero photo for this recipe.'}
@@ -396,7 +396,7 @@ export default function RecipeDetail() {
             <input 
               value={title} 
               onChange={e => setTitle(e.target.value)} 
-              className="w-full text-3xl font-black text-black border-2 border-[#004225] rounded-xl p-3 bg-white outline-none shadow-sm"
+              className="w-full text-3xl font-black text-black border-2 border-[#004225] rounded-none p-3 bg-white outline-none"
               style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
             />
           ) : (
@@ -439,7 +439,7 @@ export default function RecipeDetail() {
         </header>
 
         {isEditing && (
-          <div className="sticky top-4 z-40 mb-6 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl p-3 shadow-sm">
+          <div className="sticky top-4 z-40 mb-6 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-none p-3">
             <div className="flex items-center justify-between gap-3 mb-2">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Editing Recipe</p>
               <p className="text-xs text-slate-400">Save before leaving this page</p>
@@ -466,20 +466,20 @@ export default function RecipeDetail() {
         )}
 
         {/* Info Section */}
-        <section className={isEditing ? "bg-slate-50 rounded-3xl p-6 mb-8 border border-slate-200" : "mb-8"}>
+        <section className={isEditing ? "bg-slate-50 rounded-none p-6 mb-8 border border-slate-200" : "mb-8"}>
           {isEditing ? (
             <div className="space-y-4">
               <textarea 
                 value={description} 
                 onChange={e => setDescription(e.target.value)} 
-                className="w-full bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300 min-h-[100px]" 
+                className="w-full bg-white p-4 rounded-none text-black font-bold outline-none border-2 border-slate-300 min-h-[100px]" 
                 style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 placeholder="Description"
               />
               <input 
                 value={sourceUrl} 
                 onChange={e => setSourceUrl(e.target.value)} 
-                className="w-full bg-white p-4 rounded-2xl text-black font-bold text-sm outline-none border-2 border-slate-300" 
+                className="w-full bg-white p-4 rounded-none text-black font-bold text-sm outline-none border-2 border-slate-300" 
                 style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 placeholder="Source URL"
               />
@@ -489,17 +489,17 @@ export default function RecipeDetail() {
                   setImageUrl(e.target.value);
                   setImageLoadFailed(false);
                 }}
-                className="w-full bg-white p-4 rounded-2xl text-black font-bold text-sm outline-none border-2 border-slate-300"
+                className="w-full bg-white p-4 rounded-none text-black font-bold text-sm outline-none border-2 border-slate-300"
                 style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 placeholder="Image URL"
               />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
-                <div className="bg-white p-3 rounded-2xl border-2 border-slate-300 self-start">
+                <div className="bg-white p-3 rounded-none border-2 border-slate-300 self-start">
                   <p className="text-xs uppercase tracking-wide text-slate-500 font-bold mb-2">Category</p>
                   <select
                     value={category}
                     onChange={e => setCategory(e.target.value as any)}
-                    className="w-full bg-white p-3 rounded-xl text-black font-bold outline-none border-2 border-slate-300 min-h-[48px]"
+                    className="w-full bg-white p-3 rounded-none text-black font-bold outline-none border-2 border-slate-300 min-h-[48px]"
                     style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                   >
                     <option value="">Select Category</option>
@@ -509,7 +509,7 @@ export default function RecipeDetail() {
                     <option value="Snack">🍿 Snack</option>
                   </select>
                 </div>
-                <div className="bg-white p-3 rounded-2xl border-2 border-slate-300 self-start">
+                <div className="bg-white p-3 rounded-none border-2 border-slate-300 self-start">
                   <p className="text-xs uppercase tracking-wide text-slate-500 font-bold mb-2">Dietary Tags</p>
                   <div className="flex flex-wrap gap-2">
                     {DIET_OPTIONS.map((diet) => {
@@ -519,7 +519,7 @@ export default function RecipeDetail() {
                           key={diet}
                           type="button"
                           onClick={() => toggleDiet(diet)}
-                          className={`px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold border transition-colors ${
+                          className={`px-3 py-1 rounded-none text-[11px] sm:text-xs font-bold border transition-colors ${
                             isSelected
                               ? 'bg-[#004225] text-white border-[#004225]'
                               : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
@@ -536,7 +536,7 @@ export default function RecipeDetail() {
                 type="number"
                 value={totalTime}
                 onChange={e => setTotalTime(e.target.value ? parseInt(e.target.value) : '')}
-                className="w-full bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300"
+                className="w-full bg-white p-4 rounded-none text-black font-bold outline-none border-2 border-slate-300"
                 style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 placeholder="Total time (mins)"
                 min="1"
@@ -544,7 +544,7 @@ export default function RecipeDetail() {
               <input
                 value={tags.join(', ')}
                 onChange={e => setTags(e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
-                className="w-full bg-white p-4 rounded-2xl text-black font-bold text-sm outline-none border-2 border-slate-300"
+                className="w-full bg-white p-4 rounded-none text-black font-bold text-sm outline-none border-2 border-slate-300"
                 style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 placeholder="Tags (comma separated: Vegetarian, Gluten-Free, One-Pot)"
               />
@@ -555,7 +555,7 @@ export default function RecipeDetail() {
               {tags && tags.length > 0 && (
                 <div className="mb-5 flex flex-wrap gap-2">
                   {tags.map((tag, index) => (
-                    <span key={index} className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-medium">
+                    <span key={index} className="bg-slate-100 text-slate-600 px-3 py-1 rounded-none text-xs font-medium">
                       {tag}
                     </span>
                   ))}
@@ -574,16 +574,18 @@ export default function RecipeDetail() {
                 <button
                   type="button"
                   onClick={openPlanPicker}
-                  className="flex-1 !rounded-2xl bg-[#004225] px-5 py-4 text-sm font-black uppercase tracking-[0.14em] text-white shadow-sm hover:bg-[#0b5a36] transition-colors"
+                  className="quiet-action quiet-action-brand flex-1 py-3 text-sm font-black tracking-[0.16em]"
                 >
-                  + Add to Plan
+                  + PLAN
+                  <span aria-hidden="true" className="quiet-action-line" />
                 </button>
                 <button
                   type="button"
                   onClick={() => { window.location.href = `/submit-order?recipeId=${params.id}&autoload=1`; }}
-                  className="flex-1 !rounded-2xl bg-[#004225] px-5 py-4 text-sm font-black uppercase tracking-[0.14em] text-white shadow-sm hover:bg-[#0b5a36] transition-colors"
+                  className="quiet-action quiet-action-brand flex-1 py-3 text-sm font-black tracking-[0.16em]"
                 >
-                  🛒 Order
+                  🛒 ORDER
+                  <span aria-hidden="true" className="quiet-action-line" />
                 </button>
               </div>
             </>
@@ -593,10 +595,10 @@ export default function RecipeDetail() {
         <div className="mb-8 border-t border-slate-100" />
 
         {/* Tab Selector */}
-        <div className="relative mb-8 grid grid-cols-2 rounded-2xl bg-slate-100 p-1">
+        <div className="relative mb-8 grid grid-cols-2 rounded-none border border-slate-200 bg-slate-100 p-1">
           <span
             aria-hidden="true"
-            className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-xl bg-white shadow-sm transition-transform duration-200 ${
+            className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-none border border-slate-200 bg-white transition-transform duration-200 ${
               activeTab === 'ingredients' ? 'translate-x-0' : 'translate-x-full'
             }`}
           />
@@ -630,7 +632,7 @@ export default function RecipeDetail() {
           )}
           <div className="space-y-3">
             {ingredients.map((ing: any, i: number) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-none border border-slate-100">
                 {isEditing ? (
                   <div className="grid gap-3 w-full">
                     <input 
@@ -639,7 +641,7 @@ export default function RecipeDetail() {
                       placeholder="Ingredient name"
                       onChange={e => { const n = [...ingredients]; n[i].item_name = e.target.value; setIngredients(n); }} 
                       onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
-                      className="w-full bg-white border border-slate-300 p-3 rounded-lg font-bold text-black outline-none min-w-0" 
+                      className="w-full bg-white border border-slate-300 p-3 rounded-none font-bold text-black outline-none min-w-0" 
                       style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                     />
                     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 sm:grid-cols-[96px_1fr_auto] sm:max-w-sm">
@@ -648,14 +650,14 @@ export default function RecipeDetail() {
                         placeholder="Qty"
                         onChange={e => { const n = [...ingredients]; n[i].amount = e.target.value; setIngredients(n); }} 
                         onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
-                        className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none" 
+                        className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-none text-center font-bold text-black outline-none" 
                         style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                       />
                       <select
                         value={ing.unit || 'g'}
                         onChange={e => { const n = [...ingredients]; n[i].unit = e.target.value; setIngredients(n); }}
                         onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
-                        className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-lg text-center font-bold text-black outline-none"
+                        className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-none text-center font-bold text-black outline-none"
                         style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                       >
                         {ing.unit && !UNIT_OPTIONS.includes(ing.unit) && <option value={ing.unit}>{ing.unit}</option>}
@@ -663,12 +665,12 @@ export default function RecipeDetail() {
                           <option key={unit} value={unit}>{unit}</option>
                         ))}
                       </select>
-                      <button onClick={() => setIngredients(ingredients.filter((_, idx) => idx !== i))} className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-black text-sm hover:bg-red-200 transition-colors">×</button>
+                      <button onClick={() => setIngredients(ingredients.filter((_, idx) => idx !== i))} className="w-9 h-9 bg-red-100 text-red-600 rounded-none font-black text-sm hover:bg-red-200 transition-colors">×</button>
                     </div>
                   </div>
                 ) : (
                   <label className="flex items-center gap-4 w-full cursor-pointer group">
-                    <input type="checkbox" className="w-6 h-6 rounded-full border-2 border-slate-300 appearance-none checked:bg-[#004225] transition-all shrink-0" />
+                    <input type="checkbox" className="w-6 h-6 rounded-none border-2 border-slate-300 appearance-none checked:bg-[#004225] transition-all shrink-0" />
                     <span className="font-bold text-slate-900 group-has-[:checked]:text-slate-300 group-has-[:checked]:line-through flex-1">{ing.item_name}</span>
                     <span className="text-sm font-black text-slate-400 uppercase shrink-0">{ing.amount}{ing.unit}</span>
                   </label>
@@ -691,7 +693,7 @@ export default function RecipeDetail() {
           <div className="space-y-6">
             {instructions.map((step: string, i: number) => (
               <div key={i} className="flex gap-4">
-                <span className="w-8 h-8 rounded-2xl bg-[#004225] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-lg">{i + 1}</span>
+                <span className="w-8 h-8 rounded-none bg-[#004225] text-white flex items-center justify-center font-black text-sm shrink-0">{i + 1}</span>
                 {isEditing ? (
                   <div className="w-full relative">
                     <textarea 
@@ -699,11 +701,11 @@ export default function RecipeDetail() {
                       value={step} 
                       onChange={e => { const n = [...instructions]; n[i] = e.target.value; setInstructions(n); }} 
                       onKeyDown={(e) => handleRecipeInstructionEnter(e, i)}
-                      className="w-full bg-white p-4 rounded-2xl text-black font-bold outline-none border-2 border-slate-300 resize-none" 
+                      className="w-full bg-white p-4 rounded-none text-black font-bold outline-none border-2 border-slate-300 resize-none" 
                       style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                       rows={3}
                     />
-                    <button onClick={() => setInstructions(instructions.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-600 text-white w-6 h-6 rounded-full font-black text-xs">×</button>
+                    <button onClick={() => setInstructions(instructions.filter((_, idx) => idx !== i))} className="absolute -top-2 -right-2 bg-red-600 text-white w-6 h-6 rounded-none font-black text-xs">×</button>
                   </div>
                 ) : (
                   <p className="text-lg text-slate-800 leading-relaxed font-medium pt-1 flex-1">{step}</p>
@@ -726,14 +728,14 @@ export default function RecipeDetail() {
 
       {showPlanPicker && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[70] flex items-end sm:items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 p-6 shadow-2xl">
+          <div className="w-full max-w-md bg-white rounded-none sm:rounded-none border border-slate-200 p-6">
             <h3 className="text-lg font-black text-slate-900 mb-1">Add To Plan</h3>
             <p className="text-sm text-slate-600 mb-4 line-clamp-1">{title}</p>
 
             <select
               value={planDayIndex}
               onChange={(e) => setPlanDayIndex(parseInt(e.target.value))}
-              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 outline-none mb-4"
+              className="w-full bg-white border border-slate-300 rounded-none px-3 py-3 text-sm font-semibold text-slate-700 outline-none mb-4"
               style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
             >
               {WEEKDAY_OPTIONS.map((day, i) => (

@@ -84,6 +84,23 @@ button {
   transform: scale(0.97);
 }
 
+.quiet-action-brand {
+  color: #004225;
+  border-color: rgba(0, 66, 37, 0.45);
+  background: rgba(0, 66, 37, 0.035);
+}
+
+.quiet-action-brand:hover,
+.quiet-action-brand:focus-visible {
+  color: #00301b;
+  border-color: rgba(0, 66, 37, 0.9);
+  background: rgba(0, 66, 37, 0.12);
+}
+
+.quiet-action-brand:active {
+  background: rgba(0, 66, 37, 0.16);
+}
+
 .quiet-action-line {
   position: absolute;
   left: 0.5rem;
@@ -94,6 +111,10 @@ button {
   transform: scaleX(0);
   transform-origin: center;
   transition: transform 220ms ease;
+}
+
+.quiet-action-brand .quiet-action-line {
+  background: rgba(0, 66, 37, 0.92);
 }
 
 .quiet-action:hover .quiet-action-line,

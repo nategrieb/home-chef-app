@@ -61,7 +61,7 @@ export default function RecipeCard({
   const showThumbnail = Boolean(recipe.image_url && !imageLoadFailed);
 
   return (
-    <div className="group bg-white rounded-2xl border border-slate-200 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-slate-300 active:scale-[0.995]">
+    <div className="group bg-white rounded-none border border-slate-200 overflow-hidden transition-all duration-200 hover:border-slate-300 active:scale-[0.995]">
 
       {/* ── Main tap target ────────────────────────────────────── */}
       <Link href={`/recipes/${recipe.id}`} className="flex h-[96px] overflow-hidden">
@@ -96,7 +96,7 @@ export default function RecipeCard({
           {/* Primary meta: category pill + diet labels + time */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {recipe.category && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-[#004225] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
+              <span className="inline-flex items-center gap-0.5 rounded-none bg-[#004225] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
                 {CATEGORY_ICON[recipe.category]} {recipe.category}
               </span>
             )}
@@ -118,7 +118,7 @@ export default function RecipeCard({
               {recipe.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500"
+                  className="rounded-none bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500"
                 >
                   {tag}
                 </span>
@@ -141,10 +141,10 @@ export default function RecipeCard({
             e.stopPropagation();
             onAddToPlan(recipe.id);
           }}
-          className="quiet-action flex-1 py-2.5 text-[11px] font-black tracking-[0.16em]"
+          className="quiet-action quiet-action-brand flex-1 border border-slate-200 py-2.5 text-[11px] font-black tracking-[0.16em]"
           aria-label="Add recipe to plan"
         >
-          + Plan
+          + PLAN
           <span aria-hidden="true" className="quiet-action-line" />
         </button>
         <div className="w-px shrink-0 bg-slate-100" />
@@ -154,10 +154,10 @@ export default function RecipeCard({
             e.stopPropagation();
             window.location.href = `/submit-order?recipeId=${recipe.id}&autoload=1`;
           }}
-          className="quiet-action flex-1 py-2.5 text-[11px] font-black tracking-[0.16em]"
+          className="quiet-action quiet-action-brand flex-1 border border-slate-200 py-2.5 text-[11px] font-black tracking-[0.16em]"
           aria-label="Start order from recipe"
         >
-          Order
+          🛒 ORDER
           <span aria-hidden="true" className="quiet-action-line" />
         </button>
       </div>
