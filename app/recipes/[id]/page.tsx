@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import MobileNav from '../../../components/MobileNav';
 import Header from '../../../components/Header';
 import { inferCanonicalIngredient, inferPreparationNote } from '../../../lib/ingredient-normalization';
@@ -33,6 +33,7 @@ type DietOption = (typeof DIET_OPTIONS)[number];
 
 export default function RecipeDetail() {
   const params = useParams();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [recipe, setRecipe] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -53,7 +54,7 @@ export default function RecipeDetail() {
   const [instructions, setInstructions] = useState<string[]>([]);
   const [planDayIndex, setPlanDayIndex] = useState<number>((new Date().getDay() + 6) % 7);
   const [showPlanPicker, setShowPlanPicker] = useState(false);
-  const [showManageActions, setShowManageActions] = useState(false);
+  const [showUtilityMenu, setShowUtilityMenu] = useState(false);
 
   const hydrateForm = (data: any) => {
     setTitle(data.title || '');
@@ -284,7 +285,7 @@ export default function RecipeDetail() {
   };
 
   const startEditing = () => {
-    setShowManageActions(false);
+    setShowUtilityMenu(false);
     setIsEditing(true);
   };
 
@@ -304,10 +305,70 @@ export default function RecipeDetail() {
 
   const resolvedImageUrl = imageUrl.trim();
   const showRecipeImage = Boolean(resolvedImageUrl && !imageLoadFailed);
+  const metaItems: string[] = [];
+  if (typeof totalTime === 'number' && totalTime > 0) metaItems.push(`${totalTime} min`);
+  if (category) metaItems.push(category);
+  if (dietaryPreference.length) metaItems.push(`Dietary: ${dietaryPreference.join(', ')}`);
 
   return (
     <main className="min-h-screen bg-white pb-44">
-      <div className="max-w-2xl mx-auto px-6 pt-10">
+      <div className="sticky top-0 z-50 border-b border-slate-100 bg-white/85 backdrop-blur-sm">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="quiet-action px-3 py-2 text-[11px] font-black"
+            aria-label="Go back"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 18l-6-6 6-6" />
+            </svg>
+            <span className="sr-only">Back</span>
+            <span aria-hidden="true" className="quiet-action-line" />
+          </button>
+
+          <div className="flex items-center gap-2">
+            {!isEditing && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowUtilityMenu((current) => !current)}
+                  className="quiet-action px-3 py-2 text-[11px] font-black"
+                  aria-label="More options"
+                >
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="5" cy="12" r="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <circle cx="19" cy="12" r="2" />
+                  </svg>
+                  <span className="sr-only">More</span>
+                  <span aria-hidden="true" className="quiet-action-line" />
+                </button>
+                {showUtilityMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-44 rounded-xl border border-slate-200 bg-white shadow-lg p-1.5">
+                    <button
+                      type="button"
+                      onClick={startEditing}
+                      className="w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+                    >
+                      Edit Recipe
+                    </button>
+                    <button
+                      type="button"
+                      onClick={deleteRecipeRecord}
+                      className="w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-wider text-red-600 hover:bg-red-50"
+                    >
+                      Delete Recipe
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-6 pt-8">
         <Header />
 
         {showRecipeImage ? (
@@ -330,7 +391,7 @@ export default function RecipeDetail() {
           </div>
         )}
 
-        <header className="mb-8">
+        <header className="mb-4">
           {isEditing ? (
             <input 
               value={title} 
@@ -339,7 +400,41 @@ export default function RecipeDetail() {
               style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
             />
           ) : (
-            <h1 className="page-title-brand text-3xl sm:text-4xl">{title}</h1>
+            <>
+              <div className="flex items-start gap-2 sm:gap-3">
+                <h1 className="page-title-brand text-4xl sm:text-5xl">{title}</h1>
+                {sourceUrl && (
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex shrink-0 items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+                    aria-label="Open source article"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    <span className="sr-only">Source Article</span>
+                  </a>
+                )}
+              </div>
+              <div className="mt-4 border-y border-slate-200 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  {metaItems.map((item, index) => (
+                    <span key={item} className="inline-flex items-center gap-2">
+                      {index === 0 && (
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="9" strokeWidth={2} />
+                          <path d="M12 7v5l3 2" strokeWidth={2} strokeLinecap="round" />
+                        </svg>
+                      )}
+                      {index > 0 && <span aria-hidden="true">•</span>}
+                      <span>{item}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </header>
 
@@ -370,8 +465,8 @@ export default function RecipeDetail() {
           </div>
         )}
 
-        {/* Description Section */}
-        <section className="bg-slate-100 rounded-3xl p-6 mb-12 border border-slate-200">
+        {/* Info Section */}
+        <section className={isEditing ? "bg-slate-50 rounded-3xl p-6 mb-8 border border-slate-200" : "mb-8"}>
           {isEditing ? (
             <div className="space-y-4">
               <textarea 
@@ -456,115 +551,71 @@ export default function RecipeDetail() {
             </div>
           ) : (
             <>
-              <div className="mb-5 flex flex-col sm:flex-row gap-2">
-                <button
-                  type="button"
-                  onClick={openPlanPicker}
-                  className="quiet-action w-full sm:w-auto px-5 py-3 text-sm font-black"
-                >
-                  + Add to Plan
-                  <span aria-hidden="true" className="quiet-action-line" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { window.location.href = `/submit-order?recipeId=${params.id}&autoload=1`; }}
-                  className="quiet-action w-full sm:w-auto px-5 py-3 text-sm font-black"
-                >
-                  Order
-                  <span aria-hidden="true" className="quiet-action-line" />
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-3 mb-5">
-                {category && (
-                  <span className="inline-flex items-center gap-2 bg-[#004225] text-white px-3 py-1 rounded-full text-xs font-black uppercase">
-                    {category === 'Breakfast' && '🍳'} {category === 'Lunch' && '🥗'} {category === 'Dinner' && '🍽️'} {category === 'Snack' && '🍿'} {category}
-                  </span>
-                )}
-                {dietaryPreference.length > 0 && dietaryPreference.map((diet) => (
-                  <span key={diet} className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
-                    {DIET_EMOJI[diet]} {diet}
-                  </span>
-                ))}
-                {totalTime && (
-                  <span className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold">
-                    ⏱️ {totalTime} mins
-                  </span>
-                )}
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
-                <p className="text-slate-700 text-lg leading-relaxed">{description || "No description provided."}</p>
-              </div>
-
-              {sourceUrl && (
-                <a href={sourceUrl} target="_blank" className="quiet-action inline-flex items-center gap-2 px-5 py-3 text-xs font-black mb-4">
-                  Source Article
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                  <span aria-hidden="true" className="quiet-action-line" />
-                </a>
-              )}
+              {/* Tags Area */}
               {tags && tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="mb-5 flex flex-wrap gap-2">
                   {tags.map((tag, index) => (
-                    <span key={index} className="bg-slate-200 text-slate-800 px-3 py-1 rounded-full text-xs font-medium">
+                    <span key={index} className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-medium">
                       {tag}
                     </span>
                   ))}
                 </div>
               )}
 
-              <div className="pt-1">
+              {/* Description */}
+              {description && (
+                <p className="text-slate-700 text-base sm:text-lg leading-relaxed mb-6" style={{ lineHeight: 1.6 }}>
+                  {description}
+                </p>
+              )}
+
+              {/* Balanced Action Row */}
+              <div className="mb-12 flex items-stretch gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowManageActions((current) => !current)}
-                  className="text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                  onClick={openPlanPicker}
+                  className="flex-1 !rounded-2xl bg-[#004225] px-5 py-4 text-sm font-black uppercase tracking-[0.14em] text-white shadow-sm hover:bg-[#0b5a36] transition-colors"
                 >
-                  {showManageActions ? 'Hide Manage' : 'Manage Recipe'}
+                  + Add to Plan
                 </button>
-                {showManageActions && (
-                  <div className="mt-2 pt-3 border-t border-slate-200">
-                    <div className="mb-3">
-                      <button
-                        type="button"
-                        onClick={startEditing}
-                        className="text-xs font-bold uppercase tracking-wider text-slate-600 hover:text-slate-900 transition-colors"
-                      >
-                        Edit Recipe
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={deleteRecipeRecord}
-                      className="text-xs font-bold uppercase tracking-wider text-red-600 hover:text-red-700 transition-colors"
-                    >
-                      Delete Recipe
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = `/submit-order?recipeId=${params.id}&autoload=1`; }}
+                  className="flex-1 !rounded-2xl bg-[#004225] px-5 py-4 text-sm font-black uppercase tracking-[0.14em] text-white shadow-sm hover:bg-[#0b5a36] transition-colors"
+                >
+                  🛒 Order
+                </button>
               </div>
             </>
           )}
         </section>
 
+        <div className="mb-8 border-t border-slate-100" />
+
         {/* Tab Selector */}
-        <div className="flex bg-slate-100 rounded-2xl p-1 mb-8 border border-slate-200">
+        <div className="relative mb-8 grid grid-cols-2 rounded-2xl bg-slate-100 p-1">
+          <span
+            aria-hidden="true"
+            className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-xl bg-white shadow-sm transition-transform duration-200 ${
+              activeTab === 'ingredients' ? 'translate-x-0' : 'translate-x-full'
+            }`}
+          />
           <button
             onClick={() => setActiveTab('ingredients')}
-            className={`flex-1 py-3 px-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${
+            className={`relative z-10 py-3 px-4 text-sm font-black uppercase tracking-wider transition-colors ${
               activeTab === 'ingredients'
-                ? 'bg-[#004225] text-white shadow-lg'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'text-[#004225]'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             Ingredients
           </button>
           <button
             onClick={() => setActiveTab('instructions')}
-            className={`flex-1 py-3 px-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all ${
+            className={`relative z-10 py-3 px-4 text-sm font-black uppercase tracking-wider transition-colors ${
               activeTab === 'instructions'
-                ? 'bg-[#004225] text-white shadow-lg'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'text-[#004225]'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             Instructions
@@ -574,15 +625,9 @@ export default function RecipeDetail() {
         {/* Ingredients Section with Unit Input */}
         {activeTab === 'ingredients' && (
         <section className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 bg-[#004225] rounded-full flex items-center justify-center">
-              <span className="text-white font-black text-sm">🥕</span>
-            </div>
-            <h2 className="text-2xl font-black uppercase tracking-widest text-slate-900">Ingredients</h2>
-            {isEditing && (
-              <span className="text-sm text-slate-500 font-medium">({ingredients.length} items)</span>
-            )}
-          </div>
+          {isEditing && (
+            <div className="mb-3 text-sm text-slate-500 font-medium">{ingredients.length} items</div>
+          )}
           <div className="space-y-3">
             {ingredients.map((ing: any, i: number) => (
               <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
@@ -643,13 +688,6 @@ export default function RecipeDetail() {
         {/* Instructions Section */}
         {activeTab === 'instructions' && (
         <section className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 bg-[#004225] rounded-full flex items-center justify-center">
-              <span className="text-white font-black text-sm">👨‍🍳</span>
-            </div>
-            <h2 className="text-2xl font-black uppercase tracking-widest text-slate-900">Instructions</h2>
-          </div>
-          
           <div className="space-y-6">
             {instructions.map((step: string, i: number) => (
               <div key={i} className="flex gap-4">

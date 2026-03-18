@@ -64,7 +64,7 @@ export default function RecipeCard({
     <div className="group bg-white rounded-2xl border border-slate-200 overflow-hidden transition-all duration-200 hover:shadow-md hover:border-slate-300 active:scale-[0.995]">
 
       {/* ── Main tap target ────────────────────────────────────── */}
-      <Link href={`/recipes/${recipe.id}`} className="flex min-h-[96px]">
+      <Link href={`/recipes/${recipe.id}`} className="flex h-[96px] overflow-hidden">
 
         {/* Thumbnail — flush left, full card height */}
         <div className="relative w-[96px] shrink-0 self-stretch overflow-hidden bg-slate-100">

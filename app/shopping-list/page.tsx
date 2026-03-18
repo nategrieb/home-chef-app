@@ -25,14 +25,13 @@ interface IngredientAlias {
 interface IngredientPrepDetail {
   label: string;
   amount: number;
+  unit: string;
   recipeTitles: string[];
 }
 
 interface AggregatedIngredient {
   state_key: string;
   canonical_name: string;
-  unit: string;
-  total_amount: number;
   recipeTitles: string[];
   prep_details: IngredientPrepDetail[];
 }
@@ -106,19 +105,22 @@ export default function ShoppingList() {
         const aliasMatch = aliases.find((alias) => sourceText.includes(alias.raw_term.toLowerCase()));
         const canonicalName = (aliasMatch?.canonical_name || inferredCanonical).trim();
         const unit = (ing.unit || 'item').trim();
-        const stateKey = buildShoppingStateKey(canonicalName, unit);
+        // Group by canonical ingredient name across unit/prep variants.
+        const canonicalGroupKey = canonicalName.toLowerCase();
+        const stateKey = buildShoppingStateKey(canonicalName, 'all');
         const amount = Number(ing.amount || 0);
         const recipeTitle = meal.recipe?.title || 'Recipe';
         const prepLabel = (ing.preparation_note?.trim() || inferPreparationNote(ing.item_name || '', canonicalName) || 'General').trim();
         
-        if (ingredientMap.has(stateKey)) {
-          const existing = ingredientMap.get(stateKey)!;
-          existing.total_amount += amount;
+        if (ingredientMap.has(canonicalGroupKey)) {
+          const existing = ingredientMap.get(canonicalGroupKey)!;
           if (!existing.recipeTitles.includes(recipeTitle)) {
             existing.recipeTitles.push(recipeTitle);
           }
 
-          const existingPrep = existing.prep_details.find((prep) => prep.label === prepLabel);
+          const existingPrep = existing.prep_details.find(
+            (prep) => prep.label === prepLabel && prep.unit === unit
+          );
           if (existingPrep) {
             existingPrep.amount += amount;
             if (!existingPrep.recipeTitles.includes(recipeTitle)) {
@@ -128,20 +130,20 @@ export default function ShoppingList() {
             existing.prep_details.push({
               label: prepLabel,
               amount,
+              unit,
               recipeTitles: [recipeTitle],
             });
           }
         } else {
-          ingredientMap.set(stateKey, {
+          ingredientMap.set(canonicalGroupKey, {
             state_key: stateKey,
             canonical_name: canonicalName,
-            unit,
-            total_amount: amount,
             recipeTitles: [recipeTitle],
             prep_details: [
               {
                 label: prepLabel,
                 amount,
+                unit,
                 recipeTitles: [recipeTitle],
               },
             ],
@@ -341,18 +343,15 @@ export default function ShoppingList() {
                     </span>
                     <div className={`text-[10px] font-black uppercase tracking-tight space-y-1 ${isChecked ? 'text-slate-200' : 'text-slate-500'}`}>
                       {item.prep_details.map((prep) => (
-                        <div key={`${item.state_key}-${prep.label}`}>
+                        <div key={`${item.state_key}-${prep.label}-${prep.unit}`}>
                           {prep.label === 'General'
-                            ? `${prep.amount} ${item.unit} • ${prep.recipeTitles.join(' • ')}`
-                            : `${prep.amount} ${item.unit} (${prep.label}) • ${prep.recipeTitles.join(' • ')}`}
+                            ? `${prep.amount} ${prep.unit} • ${prep.recipeTitles.join(' • ')}`
+                            : `${prep.amount} ${prep.unit} (${prep.label}) • ${prep.recipeTitles.join(' • ')}`}
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
-                <span className={`font-black text-sm shrink-0 ${isChecked ? 'text-slate-200' : 'text-slate-900'}`}>
-                  {item.total_amount} {item.unit}
-                </span>
               </label>
                 );
               })()
