@@ -22,23 +22,6 @@ interface Recipe {
   ingredients?: Ingredient[];
 }
 
-const CATEGORY_ICON: Record<string, string> = {
-  Breakfast: '🍳',
-  Lunch: '🥗',
-  Dinner: '🍽️',
-  Snack: '🍿',
-};
-
-const DIET_EMOJI: Record<string, string> = {
-  Vegan: '🌱',
-  Vegetarian: '🥕',
-  'Gluten-Free': '🌾',
-  Pescetarian: '🐟',
-  'Dairy-Free': '🥛',
-  'Nut-Free': '🥜',
-  'Low-Carb': '🥖',
-};
-
 export default function RecipeCard({
   recipe,
   onAddToPlan,
@@ -59,21 +42,22 @@ export default function RecipeCard({
       : [];
 
   const showThumbnail = Boolean(recipe.image_url && !imageLoadFailed);
+  const metaItems = [
+    recipe.category,
+    dietaryPreferences[0],
+    recipe.total_time ? `${recipe.total_time} min` : null,
+  ].filter(Boolean) as string[];
 
   return (
-    <div className="group bg-white rounded-none border border-slate-200 overflow-hidden transition-all duration-200 hover:border-slate-300 active:scale-[0.995]">
-
-      {/* ── Main tap target ────────────────────────────────────── */}
-      <Link href={`/recipes/${recipe.id}`} className="flex h-[96px] overflow-hidden">
-
-        {/* Thumbnail — flush left, full card height */}
-        <div className="relative w-[96px] shrink-0 self-stretch overflow-hidden bg-slate-100">
+    <div className="group bg-white rounded-none border border-slate-200 p-3 transition-colors duration-200 hover:border-slate-300">
+      <div className="flex items-start gap-3">
+        <Link href={`/recipes/${recipe.id}`} className="relative h-24 w-24 shrink-0 overflow-hidden bg-slate-100">
           {showThumbnail ? (
             <img
               src={recipe.image_url || ''}
               alt={recipe.title}
               loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="absolute inset-0 h-full w-full object-cover"
               onError={() => setImageLoadFailed(true)}
             />
           ) : (
@@ -81,85 +65,47 @@ export default function RecipeCard({
               <span className="text-3xl opacity-25">🍴</span>
             </div>
           )}
-          {/* Subtle right-edge fade so text doesn't clash */}
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-3 bg-gradient-to-r from-transparent to-white/20" />
-        </div>
+        </Link>
 
-        {/* Info block */}
-        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-3 py-3">
-
-          {/* Title */}
-          <h3 className="text-[15px] font-black leading-snug text-slate-900 line-clamp-2 transition-colors group-hover:text-[#004225]">
-            {recipe.title}
-          </h3>
-
-          {/* Primary meta: category pill + diet labels + time */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            {recipe.category && (
-              <span className="inline-flex items-center gap-0.5 rounded-none bg-[#004225] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
-                {CATEGORY_ICON[recipe.category]} {recipe.category}
-              </span>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Link href={`/recipes/${recipe.id}`} className="min-w-0">
+            <h3 className="text-[15px] font-black leading-snug text-slate-900 line-clamp-2 transition-colors group-hover:text-[#004225]">
+              {recipe.title}
+            </h3>
+            {metaItems.length > 0 && (
+              <p className="mt-1 text-[11px] font-semibold text-slate-400 line-clamp-1">
+                {metaItems.join(' • ')}
+              </p>
             )}
-            {dietaryPreferences.slice(0, 2).map((diet) => (
-              <span key={diet} className="text-[11px] font-semibold text-slate-500">
-                {DIET_EMOJI[diet]} {diet}
-              </span>
-            ))}
-            {recipe.total_time && (
-              <span className="ml-auto text-[11px] font-semibold text-slate-400 tabular-nums">
-                {recipe.total_time} min
-              </span>
-            )}
+          </Link>
+
+          <div className="mt-3 flex items-center gap-5">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onAddToPlan(recipe.id);
+              }}
+              className="quiet-action quiet-action-brand !border-transparent !bg-transparent hover:!border-transparent hover:!bg-transparent focus-visible:!border-transparent focus-visible:!bg-transparent px-0 py-0 text-[11px] font-black tracking-[0.16em]"
+              aria-label="Add recipe to plan"
+            >
+              + PLAN
+              <span aria-hidden="true" className="quiet-action-line" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = `/submit-order?recipeId=${recipe.id}&autoload=1`;
+              }}
+              className="quiet-action quiet-action-brand !border-transparent !bg-transparent hover:!border-transparent hover:!bg-transparent focus-visible:!border-transparent focus-visible:!bg-transparent px-0 py-0 text-[11px] font-black tracking-[0.16em]"
+              aria-label="Start order from recipe"
+            >
+              🛒 ORDER
+              <span aria-hidden="true" className="quiet-action-line" />
+            </button>
           </div>
-
-          {/* Secondary meta: tags */}
-          {recipe.tags && recipe.tags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1">
-              {recipe.tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-none bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500"
-                >
-                  {tag}
-                </span>
-              ))}
-              {recipe.tags.length > 3 && (
-                <span className="text-[10px] font-medium text-slate-400">
-                  +{recipe.tags.length - 3}
-                </span>
-              )}
-            </div>
-          )}
         </div>
-      </Link>
-
-      {/* ── Action bar ─────────────────────────────────────────── */}
-      <div className="flex border-t border-slate-100">
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onAddToPlan(recipe.id);
-          }}
-          className="quiet-action quiet-action-brand flex-1 border border-slate-200 py-2.5 text-[11px] font-black tracking-[0.16em]"
-          aria-label="Add recipe to plan"
-        >
-          + PLAN
-          <span aria-hidden="true" className="quiet-action-line" />
-        </button>
-        <div className="w-px shrink-0 bg-slate-100" />
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            window.location.href = `/submit-order?recipeId=${recipe.id}&autoload=1`;
-          }}
-          className="quiet-action quiet-action-brand flex-1 border border-slate-200 py-2.5 text-[11px] font-black tracking-[0.16em]"
-          aria-label="Start order from recipe"
-        >
-          🛒 ORDER
-          <span aria-hidden="true" className="quiet-action-line" />
-        </button>
       </div>
     </div>
   );
