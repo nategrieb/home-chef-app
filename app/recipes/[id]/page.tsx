@@ -38,11 +38,13 @@ export default function RecipeDetail() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'instructions'>('ingredients');
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [category, setCategory] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | ''>('');
   const [dietaryPreference, setDietaryPreference] = useState<DietOption[]>([]);
   const [totalTime, setTotalTime] = useState<number | ''>('');
@@ -57,6 +59,7 @@ export default function RecipeDetail() {
     setTitle(data.title || '');
     setDescription(data.description || '');
     setSourceUrl(data.source_url || '');
+    setImageUrl(data.image_url || '');
     setCategory(data.category || '');
     if (Array.isArray(data.dietary_preference)) {
       setDietaryPreference(data.dietary_preference as DietOption[]);
@@ -69,6 +72,7 @@ export default function RecipeDetail() {
     setTags(data.tags || []);
     setIngredients(data.ingredients || []);
     setInstructions(data.instructions || []);
+    setImageLoadFailed(false);
   };
 
   useEffect(() => {
@@ -106,6 +110,7 @@ export default function RecipeDetail() {
         title, 
         description, 
         source_url: sourceUrl, 
+        image_url: imageUrl.trim() || null,
         category: category || null,
         dietary_preference: dietaryPreference.length ? dietaryPreference : null,
         total_time: totalTime || null,
@@ -297,10 +302,33 @@ export default function RecipeDetail() {
 
   if (loading || !recipe) return <div className="p-20 text-center text-slate-900 font-bold">Loading...</div>;
 
+  const resolvedImageUrl = imageUrl.trim();
+  const showRecipeImage = Boolean(resolvedImageUrl && !imageLoadFailed);
+
   return (
     <main className="min-h-screen bg-white pb-44">
       <div className="max-w-2xl mx-auto px-6 pt-10">
         <Header />
+
+        {showRecipeImage ? (
+          <div className="mb-6 overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 shadow-sm">
+            <img
+              src={resolvedImageUrl}
+              alt={title || 'Recipe image'}
+              className="h-[240px] w-full object-cover sm:h-[320px]"
+              onError={() => setImageLoadFailed(true)}
+            />
+          </div>
+        ) : (
+          <div className="mb-6 flex h-[180px] items-end rounded-[2rem] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top_left,#fef3c7,transparent_38%),linear-gradient(135deg,#f8fafc_0%,#eff6ff_48%,#ecfccb_100%)] p-5 sm:h-[220px]">
+            <div className="rounded-2xl bg-white/80 px-4 py-3 shadow-sm backdrop-blur-sm">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Recipe Photo</p>
+              <p className="mt-1 text-sm font-semibold text-slate-700">
+                {isEditing ? 'Paste an image URL below to preview it here.' : 'Add an image URL to show a hero photo for this recipe.'}
+              </p>
+            </div>
+          </div>
+        )}
 
         <header className="mb-8">
           {isEditing ? (
@@ -359,6 +387,16 @@ export default function RecipeDetail() {
                 className="w-full bg-white p-4 rounded-2xl text-black font-bold text-sm outline-none border-2 border-slate-300" 
                 style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                 placeholder="Source URL"
+              />
+              <input
+                value={imageUrl}
+                onChange={e => {
+                  setImageUrl(e.target.value);
+                  setImageLoadFailed(false);
+                }}
+                className="w-full bg-white p-4 rounded-2xl text-black font-bold text-sm outline-none border-2 border-slate-300"
+                style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
+                placeholder="Image URL"
               />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
                 <div className="bg-white p-3 rounded-2xl border-2 border-slate-300 self-start">

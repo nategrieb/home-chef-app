@@ -1,5 +1,8 @@
 // components/RecipeCard.tsx
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 interface Ingredient {
   calories_per_unit: number;
@@ -9,6 +12,7 @@ interface Recipe {
   id: string;
   title: string;
   description?: string;
+  image_url?: string | null;
   servings?: number;
   serving_unit?: string;
   category?: string;
@@ -25,11 +29,19 @@ export default function RecipeCard({
   recipe: Recipe;
   onAddToPlan: (id: string) => void;
 }) {
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
+
+  useEffect(() => {
+    setImageLoadFailed(false);
+  }, [recipe.image_url]);
+
   const dietaryPreferences = Array.isArray(recipe.dietary_preference)
     ? recipe.dietary_preference
     : recipe.dietary_preference
       ? [recipe.dietary_preference]
       : [];
+
+  const showThumbnail = Boolean(recipe.image_url && !imageLoadFailed);
 
   const dietEmoji: Record<string, string> = {
     Vegan: '🌱',
@@ -43,9 +55,30 @@ export default function RecipeCard({
 
   return (
     <div className="group relative bg-white rounded-xl border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-      <Link href={`/recipes/${recipe.id}`} className="block p-6">
-        <div className="flex justify-between items-start">
-          <div className="flex-1 min-w-0">
+      <Link href={`/recipes/${recipe.id}`} className="block">
+        <div className="flex items-start gap-4 p-4 sm:p-5">
+          <div className="shrink-0">
+            {showThumbnail ? (
+              <div className="relative h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 sm:h-28 sm:w-28">
+                <img
+                  src={recipe.image_url || ''}
+                  alt={recipe.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  onError={() => setImageLoadFailed(true)}
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-transparent" />
+              </div>
+            ) : (
+              <div className="flex h-24 w-24 items-end rounded-2xl border border-dashed border-slate-300 bg-[linear-gradient(135deg,#eff6ff_0%,#f8fafc_48%,#dcfce7_100%)] p-2 sm:h-28 sm:w-28">
+                <span className="inline-flex rounded-full bg-white/90 px-2 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-600 shadow-sm">
+                  No Photo
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
             <h3 className="text-xl font-medium text-slate-900 mb-2 group-hover:text-slate-700 transition-colors line-clamp-2">
               {recipe.title}
             </h3>
@@ -86,7 +119,7 @@ export default function RecipeCard({
               )}
             </div>
           </div>
-          <div className="ml-4 flex flex-col gap-2">
+          <div className="flex shrink-0 flex-col gap-2 self-stretch justify-center">
             <button
               onClick={(e) => {
                 e.preventDefault();
