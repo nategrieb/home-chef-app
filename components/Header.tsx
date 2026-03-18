@@ -14,8 +14,6 @@ export default function Header({ children }: HeaderProps) {
         <p className="text-sm md:text-base font-bold tracking-wider text-zinc-900 uppercase">THE MENU</p>
       </Link>
       <div className="flex items-end gap-4">
-        {/* tagline hidden on small screens */}
-        <p className="hidden sm:block text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">Kitchen of Grieb</p>
         {children}
       </div>
     </header>
