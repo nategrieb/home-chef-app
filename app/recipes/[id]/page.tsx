@@ -595,29 +595,29 @@ export default function RecipeDetail() {
         <div className="mb-8 border-t border-slate-100" />
 
         {/* Tab Selector */}
-        <div className="relative mb-8 grid grid-cols-2 rounded-none border border-slate-200 bg-slate-100 p-1">
+        <div className="relative mb-8 flex w-full rounded-none bg-slate-50 p-1">
           <span
             aria-hidden="true"
-            className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-none border border-slate-200 bg-white transition-transform duration-200 ${
+            className={`absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-none bg-white shadow-sm transition-all duration-300 ease-out ${
               activeTab === 'ingredients' ? 'translate-x-0' : 'translate-x-full'
             }`}
           />
           <button
             onClick={() => setActiveTab('ingredients')}
-            className={`relative z-10 py-3 px-4 text-sm font-black uppercase tracking-wider transition-colors ${
+            className={`relative z-10 flex-1 py-3 px-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${
               activeTab === 'ingredients'
                 ? 'text-[#004225]'
-                : 'text-slate-500 hover:text-slate-700'
+                : 'text-slate-400 hover:text-slate-500'
             }`}
           >
             Ingredients
           </button>
           <button
             onClick={() => setActiveTab('instructions')}
-            className={`relative z-10 py-3 px-4 text-sm font-black uppercase tracking-wider transition-colors ${
+            className={`relative z-10 flex-1 py-3 px-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${
               activeTab === 'instructions'
                 ? 'text-[#004225]'
-                : 'text-slate-500 hover:text-slate-700'
+                : 'text-slate-400 hover:text-slate-500'
             }`}
           >
             Instructions
