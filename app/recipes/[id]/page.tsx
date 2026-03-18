@@ -310,8 +310,29 @@ export default function RecipeDetail() {
   if (category) metaItems.push(category);
   if (dietaryPreference.length) metaItems.push(`Dietary: ${dietaryPreference.join(', ')}`);
 
+  const recipeSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Recipe',
+    name: title,
+    description: description || undefined,
+    recipeIngredient: ingredients
+      .filter((ing) => ing.item_name?.trim())
+      .map((ing) => [ing.amount, ing.unit, ing.item_name].filter(Boolean).join(' ')),
+    recipeInstructions: instructions
+      .filter(Boolean)
+      .map((step, i) => ({
+        '@type': 'HowToStep',
+        position: i + 1,
+        text: step,
+      })),
+  };
+
   return (
     <main className="min-h-screen bg-white pb-44">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(recipeSchema) }}
+      />
       <div className="sticky top-0 z-50 border-b border-slate-100 bg-white/85 backdrop-blur-sm">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
           <button
