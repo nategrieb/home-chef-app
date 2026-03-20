@@ -74,6 +74,38 @@ export default function MealPlan() {
 
   async function removeMealFromPlan(mealPlanId: string) {
     setRemovingId(mealPlanId);
+
+    // Uncheck all shopping list items for this recipe before removing it
+    const meal = mealPlans.find(p => p.id === mealPlanId);
+    if (meal?.recipe?.id) {
+      const { data: recipeIngredients } = await supabase
+        .from('ingredients')
+        .select('item_name, unit, canonical_name')
+        .eq('recipe_id', meal.recipe.id);
+
+      const ingredientKeys = Array.from(
+        new Set(
+          (recipeIngredients || []).map((row: { item_name: string; unit?: string; canonical_name?: string | null }) => {
+            const canonical = row.canonical_name?.trim() || inferCanonicalIngredient(row.item_name || '');
+            return buildShoppingStateKey(canonical, row.unit || 'item');
+          }).filter(Boolean)
+        )
+      );
+
+      if (ingredientKeys.length > 0) {
+        await supabase
+          .from('shopping_list_state')
+          .upsert(
+            ingredientKeys.map((itemName) => ({
+              item_name: itemName,
+              is_checked: false,
+              updated_at: new Date().toISOString(),
+            })),
+            { onConflict: 'item_name' }
+          );
+      }
+    }
+
     setTimeout(async () => {
       await supabase.from('meal_plans').delete().eq('id', mealPlanId);
       setMealPlans(prev => prev.filter(p => p.id !== mealPlanId));
