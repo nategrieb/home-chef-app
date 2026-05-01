@@ -40,8 +40,10 @@ export default function ShoppingList() {
   const [mealPlans, setMealPlans] = useState<any[]>([]);
   const [aggregatedIngredients, setAggregatedIngredients] = useState<AggregatedIngredient[]>([]);
   const [shoppingState, setShoppingState] = useState<Record<string, boolean>>({});
+  const [pendingShoppingState, setPendingShoppingState] = useState<Record<string, boolean>>({});
   const [aliases, setAliases] = useState<IngredientAlias[]>([]);
   const [manualItems, setManualItems] = useState<ManualShoppingItem[]>([]);
+  const [deletingManualItemIds, setDeletingManualItemIds] = useState<string[]>([]);
   const [newManualItem, setNewManualItem] = useState('');
   const [addingManualItem, setAddingManualItem] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -170,12 +172,21 @@ export default function ShoppingList() {
 
   async function toggleItem(stateKey: string, currentState: boolean) {
     const normalized = stateKey.trim().toLowerCase();
+    if (normalized in pendingShoppingState) return;
+
+    const nextState = !currentState;
+
+    setPendingShoppingState((prev) => ({
+      ...prev,
+      [normalized]: nextState,
+    }));
+
     const { error } = await supabase
       .from('shopping_list_state')
       .upsert(
         {
           item_name: normalized,
-          is_checked: !currentState,
+          is_checked: nextState,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'item_name' }
@@ -184,9 +195,15 @@ export default function ShoppingList() {
     if (!error) {
       setShoppingState((prev) => ({
         ...prev,
-        [normalized]: !currentState,
+        [normalized]: nextState,
       }));
     }
+
+    setPendingShoppingState((prev) => {
+      const next = { ...prev };
+      delete next[normalized];
+      return next;
+    });
   }
 
   async function addManualItem() {
@@ -214,6 +231,11 @@ export default function ShoppingList() {
   }
 
   async function deleteManualItem(id: string) {
+    if (deletingManualItemIds.includes(id)) return;
+
+    setDeletingManualItemIds((prev) => [...prev, id]);
+    const itemToRestore = manualItems.find((item) => item.id === id);
+
     const { error } = await supabase
       .from('shopping_list_manual_items')
       .delete()
@@ -221,7 +243,11 @@ export default function ShoppingList() {
 
     if (!error) {
       setManualItems((prev) => prev.filter((item) => item.id !== id));
+    } else if (itemToRestore) {
+      alert(error.message || 'Could not remove item.');
     }
+
+    setDeletingManualItemIds((prev) => prev.filter((itemId) => itemId !== id));
   }
 
   useEffect(() => { loadShoppingPageData(); }, []);
@@ -301,13 +327,17 @@ export default function ShoppingList() {
         {manualItems.length > 0 ? (
           <div className="space-y-2">
             {manualItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between bg-white border border-amber-200 rounded-2xl px-4 py-3">
+              <div
+                key={item.id}
+                className={`flex items-center justify-between bg-white border border-amber-200 rounded-2xl px-4 py-3 transition-all duration-200 ${deletingManualItemIds.includes(item.id) ? 'pointer-events-none scale-[0.98] opacity-50' : ''}`}
+              >
                 <span className="font-semibold text-slate-900 capitalize">{item.item_name}</span>
                 <button
                   onClick={() => deleteManualItem(item.id)}
-                  className="text-xs font-black uppercase tracking-wider text-red-600"
+                  disabled={deletingManualItemIds.includes(item.id)}
+                  className="text-xs font-black uppercase tracking-wider text-red-600 disabled:opacity-60"
                 >
-                  Remove
+                  {deletingManualItemIds.includes(item.id) ? 'Removing…' : 'Remove'}
                 </button>
               </div>
             ))}
@@ -323,17 +353,20 @@ export default function ShoppingList() {
           <div className="space-y-2">
             {orderedIngredients.map((item, i) => (
               (() => {
-                const isChecked = shoppingState[item.state_key.trim().toLowerCase()] || false;
+                const normalizedStateKey = item.state_key.trim().toLowerCase();
+                const isPending = normalizedStateKey in pendingShoppingState;
+                const isChecked = pendingShoppingState[normalizedStateKey] ?? shoppingState[normalizedStateKey] ?? false;
                 return (
               <label 
                 key={`${item.state_key}-${i}`} 
-                className="flex items-center justify-between p-5 bg-slate-50 rounded-3xl border border-slate-100 active:bg-slate-100 transition-all cursor-pointer group"
+                className={`flex items-center justify-between p-5 bg-slate-50 rounded-3xl border active:bg-slate-100 transition-all cursor-pointer group ${isPending ? 'pointer-events-none border-emerald-300 bg-emerald-50/70 opacity-80' : 'border-slate-100'}`}
               >
                 <div className="flex items-center gap-4">
                   {/* British Racing Green Checkbox */}
                   <input 
                     type="checkbox" 
                     checked={isChecked}
+                    disabled={isPending}
                     onChange={() => toggleItem(item.state_key, isChecked)}
                     className="w-6 h-6 rounded-full border-2 border-slate-300 appearance-none checked:bg-[#004225] checked:border-[#004225] transition-all shrink-0" 
                   />
@@ -350,6 +383,11 @@ export default function ShoppingList() {
                         </div>
                       ))}
                     </div>
+                    {isPending ? (
+                      <div className="mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700 animate-pulse">
+                        Updating...
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </label>
