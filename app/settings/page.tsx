@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
+import AccountCard from '../../components/AccountCard';
 
 interface IngredientAlias {
   raw_term: string;
@@ -101,6 +102,8 @@ export default function SettingsPage() {
           Ingredient Grouping
         </p>
       </div>
+
+      <AccountCard />
 
       <section className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
         <h2 className="text-xs font-black text-slate-700 uppercase tracking-[0.2em] mb-3">
