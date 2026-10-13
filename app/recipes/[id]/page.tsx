@@ -158,7 +158,7 @@ export default function RecipeDetail() {
     setIsEditing(false);
     // For new recipes, redirect to home page after saving
     if (recipe?.title === 'New Recipe') {
-      window.location.href = '/';
+      window.location.href = '/recipes';
     } else {
       window.location.reload();
     }
@@ -321,7 +321,7 @@ export default function RecipeDetail() {
       return;
     }
 
-    window.location.href = '/';
+    window.location.href = '/recipes';
   };
 
   const deleteDraftRecipe = async () => {
@@ -330,7 +330,7 @@ export default function RecipeDetail() {
     try {
       await supabase.from('ingredients').delete().eq('recipe_id', params.id);
       await supabase.from('recipes').delete().eq('id', params.id);
-      window.location.href = '/';
+      window.location.href = '/recipes';
     } catch (error) {
       console.error('Error deleting draft recipe:', error);
       alert('Error deleting draft. Please try again.');

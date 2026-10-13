@@ -73,7 +73,7 @@ export default function SubmitOrderPage() {
     if (!showSuccess) return;
     const timer = window.setTimeout(() => {
       setShowSuccess(false);
-      router.push('/');
+      router.push('/recipes');
     }, 2300);
     return () => window.clearTimeout(timer);
   }, [showSuccess, router]);
