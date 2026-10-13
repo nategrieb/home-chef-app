@@ -44,7 +44,7 @@ export default function RecipeCard({
   const showThumbnail = Boolean(recipe.image_url && !imageLoadFailed);
   const metaItems = [
     recipe.category,
-    dietaryPreferences[0],
+    ...dietaryPreferences.slice(0, 2),
     recipe.total_time ? `${recipe.total_time} min` : null,
   ].filter(Boolean) as string[];
 
