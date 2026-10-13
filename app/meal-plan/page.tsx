@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { format, startOfWeek } from 'date-fns';
 import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
+import PageSkeleton from '../../components/PageSkeleton';
 import { markRecipeIngredientsUnchecked } from '../../lib/shopping';
 
 export default function MealPlan() {
@@ -59,7 +60,7 @@ export default function MealPlan() {
     }, 300);
   }
 
-  if (loading) return <div className="p-20 text-center text-slate-900 font-bold">Loading Plan...</div>;
+  if (loading) return <PageSkeleton title="Weekly Plan" />;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-white to-slate-100 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">

@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import MobileNav from '../../../components/MobileNav';
 import Header from '../../../components/Header';
+import PageSkeleton from '../../../components/PageSkeleton';
 import { inferCanonicalIngredient, inferPreparationNote } from '../../../lib/ingredient-normalization';
 import { formatQuantity, normalizeUnit } from '../../../lib/shopping';
 import { CUISINE_EMOJI, CUISINE_OPTIONS, type CuisineOption } from '../../../lib/cuisines';
@@ -333,7 +334,7 @@ export default function RecipeDetail() {
     setIsEditing(false);
   };
 
-  if (loading || !recipe) return <div className="p-20 text-center text-slate-900 font-bold">Loading...</div>;
+  if (loading || !recipe) return <PageSkeleton variant="detail" />;
 
   const resolvedImageUrl = imageUrl.trim();
   const showRecipeImage = Boolean(resolvedImageUrl && !imageLoadFailed);
