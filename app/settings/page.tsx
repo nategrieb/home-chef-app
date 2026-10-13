@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const [rawAlias, setRawAlias] = useState('');
   const [canonicalAlias, setCanonicalAlias] = useState('');
   const [aliasBusy, setAliasBusy] = useState(false);
+  const [aliasPreview, setAliasPreview] = useState<{ term: string; count: number; names: string[] } | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function fetchAliases() {
@@ -60,11 +61,7 @@ export default function SettingsPage() {
     }
 
     if (data) {
-      await supabase
-        .from('ingredients')
-        .update({ canonical_name: data.canonical_name })
-        .ilike('item_name', `%${data.raw_term}%`);
-
+      // Aliases only change how the shopping list groups items. They never rewrite saved recipes.
       setAliases((prev) => {
         const others = prev.filter((a) => a.raw_term !== data.raw_term);
         return [data, ...others];
@@ -85,6 +82,25 @@ export default function SettingsPage() {
       setAliases((prev) => prev.filter((a) => a.raw_term !== rawTerm));
     }
   }
+
+  // Show what a typed alias would match, so a too-short word (like "rice") is obvious before saving.
+  useEffect(() => {
+    const term = rawAlias.trim().toLowerCase();
+    if (term.length < 2) return;
+
+    const handle = window.setTimeout(async () => {
+      const { data } = await supabase
+        .from('ingredients')
+        .select('item_name')
+        .ilike('item_name', `%${term}%`)
+        .limit(500);
+      const rows = data ?? [];
+      const names = Array.from(new Set(rows.map((row: { item_name: string }) => row.item_name))).slice(0, 6);
+      setAliasPreview({ term, count: rows.length, names });
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [rawAlias]);
 
   useEffect(() => {
     fetchAliases();
@@ -131,6 +147,17 @@ export default function SettingsPage() {
             style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
           />
         </div>
+        {aliasPreview && aliasPreview.term === rawAlias.trim().toLowerCase() ? (
+          <p className="mb-3 text-xs text-slate-600">
+            {aliasPreview.count === 0
+              ? 'No ingredients match this word yet.'
+              : `Matches ${aliasPreview.count} ingredient${aliasPreview.count === 1 ? '' : 's'}, such as ${aliasPreview.names.join(', ')}. More specific aliases win over shorter ones.`}
+          </p>
+        ) : null}
+        <p className="mb-3 text-[11px] text-slate-400">
+          Aliases only change how the shopping list groups items. Your recipes are not changed.
+        </p>
+
         <button
           onClick={addAlias}
           disabled={aliasBusy || !rawAlias.trim() || !canonicalAlias.trim()}
