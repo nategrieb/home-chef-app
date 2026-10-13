@@ -6,31 +6,10 @@ import MobileNav from '../../../components/MobileNav';
 import Header from '../../../components/Header';
 import { inferCanonicalIngredient, inferPreparationNote } from '../../../lib/ingredient-normalization';
 import { formatQuantity, normalizeUnit } from '../../../lib/shopping';
-
-const DIET_OPTIONS = [
-  'Vegan',
-  'Vegetarian',
-  'Gluten-Free',
-  'Pescetarian',
-  'Dairy-Free',
-  'Nut-Free',
-  'Low-Carb',
-] as const;
+import { CUISINE_EMOJI, CUISINE_OPTIONS, type CuisineOption } from '../../../lib/cuisines';
 
 const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'item', 'pinch', 'clove', 'slice', 'can', 'bunch', 'block', 'head', 'carton', 'bag', 'package', 'container', 'jar'] as const;
 const WEEKDAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
-
-const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {
-  Vegan: '🌱',
-  Vegetarian: '🥕',
-  'Gluten-Free': '🌾',
-  Pescetarian: '🐟',
-  'Dairy-Free': '🥛',
-  'Nut-Free': '🥜',
-  'Low-Carb': '🥖',
-};
-
-type DietOption = (typeof DIET_OPTIONS)[number];
 
 export default function RecipeDetail() {
   const params = useParams();
@@ -48,7 +27,7 @@ export default function RecipeDetail() {
   const [sourceUrl, setSourceUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [category, setCategory] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | ''>('');
-  const [dietaryPreference, setDietaryPreference] = useState<DietOption[]>([]);
+  const [dietaryPreference, setDietaryPreference] = useState<CuisineOption[]>([]);
   const [totalTime, setTotalTime] = useState<number | ''>('');
   const [tags, setTags] = useState<string[]>([]);
   const [ingredients, setIngredients] = useState<any[]>([]);
@@ -65,9 +44,9 @@ export default function RecipeDetail() {
     setImageUrl(data.image_url || '');
     setCategory(data.category || '');
     if (Array.isArray(data.dietary_preference)) {
-      setDietaryPreference(data.dietary_preference as DietOption[]);
+      setDietaryPreference(data.dietary_preference as CuisineOption[]);
     } else if (data.dietary_preference) {
-      setDietaryPreference([data.dietary_preference as DietOption]);
+      setDietaryPreference([data.dietary_preference as CuisineOption]);
     } else {
       setDietaryPreference([]);
     }
@@ -164,7 +143,7 @@ export default function RecipeDetail() {
     }
   };
 
-  const toggleDiet = (diet: DietOption) => {
+  const toggleDiet = (diet: CuisineOption) => {
     setDietaryPreference((current) =>
       current.includes(diet)
         ? current.filter((value) => value !== diet)
@@ -361,7 +340,7 @@ export default function RecipeDetail() {
   const metaItems: string[] = [];
   if (typeof totalTime === 'number' && totalTime > 0) metaItems.push(`${totalTime} min`);
   if (category) metaItems.push(category);
-  if (dietaryPreference.length) metaItems.push(`Dietary: ${dietaryPreference.join(', ')}`);
+  if (dietaryPreference.length) metaItems.push(`Cuisine: ${dietaryPreference.join(', ')}`);
 
   const recipeSchema = {
     '@context': 'https://schema.org',
@@ -591,9 +570,9 @@ export default function RecipeDetail() {
                   </select>
                 </div>
                 <div className="bg-white p-3 rounded-none border-2 border-slate-300 self-start">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-bold mb-2">Dietary Tags</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-bold mb-2">Cuisine & Style</p>
                   <div className="flex flex-wrap gap-2">
-                    {DIET_OPTIONS.map((diet) => {
+                    {CUISINE_OPTIONS.map((diet) => {
                       const isSelected = dietaryPreference.includes(diet);
                       return (
                         <button
@@ -606,7 +585,7 @@ export default function RecipeDetail() {
                               : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
                           }`}
                         >
-                          {DIET_EMOJI[diet]} {diet}
+                          {CUISINE_EMOJI[diet]} {diet}
                         </button>
                       );
                     })}

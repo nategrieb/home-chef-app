@@ -6,26 +6,7 @@ import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
 import { markRecipeIngredientsUnchecked } from '../../lib/shopping';
 import Link from 'next/link';
-
-const DIET_OPTIONS = [
-  'Vegan',
-  'Vegetarian',
-  'Gluten-Free',
-  'Pescetarian',
-  'Dairy-Free',
-  'Nut-Free',
-  'Low-Carb',
-] as const;
-
-const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {
-  Vegan: '🌱',
-  Vegetarian: '🥕',
-  'Gluten-Free': '🌾',
-  Pescetarian: '🐟',
-  'Dairy-Free': '🥛',
-  'Nut-Free': '🥜',
-  'Low-Carb': '🥖',
-};
+import { CUISINE_EMOJI, CUISINE_OPTIONS } from '../../lib/cuisines';
 
 const WEEKDAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
@@ -40,7 +21,7 @@ export default function Home() {
   const [filteredRecipes, setFilteredRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [dietaryFilter, setDietaryFilter] = useState<'all' | (typeof DIET_OPTIONS)[number]>('all');
+  const [dietaryFilter, setDietaryFilter] = useState<'all' | (typeof CUISINE_OPTIONS)[number]>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('all');
   const [sortBy, setSortBy] = useState<'chronological'>('chronological');
   const [sortDirection, setSortDirection] = useState<'oldest' | 'newest'>('newest');
@@ -90,7 +71,7 @@ export default function Home() {
       });
     }
 
-    // Apply dietary preference filter
+    // Apply cuisine / style filter
     if (dietaryFilter !== 'all') {
       filtered = filtered.filter((recipe) => {
         if (!recipe.dietary_preference) return false;
@@ -237,9 +218,9 @@ export default function Home() {
               className="appearance-none h-full bg-transparent pl-4 pr-8 py-3 text-zinc-500 focus:outline-none cursor-pointer hover:text-zinc-900 transition-colors whitespace-nowrap"
               style={{ minWidth: 'max-content' }}
             >
-              <option value="all">All Diets</option>
-              {DIET_OPTIONS.map((diet) => (
-                <option key={diet} value={diet}>{DIET_EMOJI[diet]} {diet}</option>
+              <option value="all">All Cuisines</option>
+              {CUISINE_OPTIONS.map((cuisine) => (
+                <option key={cuisine} value={cuisine}>{CUISINE_EMOJI[cuisine]} {cuisine}</option>
               ))}
             </select>
             <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
