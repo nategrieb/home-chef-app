@@ -45,6 +45,7 @@ const UNIT_ALIASES: Record<string, string> = {
   bag: 'bag', bags: 'bag',
   package: 'package', packages: 'package', pkg: 'package',
   container: 'container', containers: 'container',
+  jar: 'jar', jars: 'jar',
   // "whole thing" counts all mean the same on a shopping list
   '': 'item', item: 'item', items: 'item', count: 'item', pcs: 'item', pc: 'item', piece: 'item', pieces: 'item',
   large: 'item', medium: 'item', small: 'item', each: 'item',
@@ -58,7 +59,7 @@ export function normalizeUnit(unit: string | null | undefined): string {
 
 const PLURALS: Record<string, string> = {
   cup: 'cups', clove: 'cloves', can: 'cans', bunch: 'bunches', pinch: 'pinches', block: 'blocks', slice: 'slices',
-  head: 'heads', carton: 'cartons', bag: 'bags', package: 'packages', container: 'containers',
+  head: 'heads', carton: 'cartons', bag: 'bags', package: 'packages', container: 'containers', jar: 'jars',
 };
 
 /** Measures you cook with, not things you buy. The list shows just the name for these (you buy a jar, not 2 tbsp). */
