@@ -1,17 +1,40 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { countToGet, fetchShoppingSnapshot, readShoppingCache, subscribeToShoppingChanges } from '../lib/shopping';
 
 export default function MobileNav() {
   const pathname = usePathname();
-  
+  const [toGet, setToGet] = useState(0);
+
+  // Badge on "List": instant from the cache, then kept fresh (also live when you or your wife change the list).
+  useEffect(() => {
+    const cached = readShoppingCache();
+    if (cached) setToGet(countToGet(cached));
+
+    const refresh = () => fetchShoppingSnapshot().then((snapshot) => setToGet(countToGet(snapshot))).catch(() => {});
+    refresh();
+    return subscribeToShoppingChanges(refresh);
+  }, []);
+
   const navItems = [
-    { name: 'Menu', path: '/' },
     { name: 'List', path: '/shopping-list' },
+    { name: 'Recipes', path: '/' },
     { name: 'Plan', path: '/meal-plan' },
     { name: 'Order', path: '/submit-order' },
-    { name: 'Settings', path: '/settings' },
   ];
+
+  const label = (item: { name: string; path: string }) => (
+    <>
+      {item.name}
+      {item.path === '/shopping-list' && toGet > 0 ? (
+        <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black leading-5 text-white">
+          {toGet}
+        </span>
+      ) : null}
+    </>
+  );
 
   return (
     <>
@@ -23,14 +46,14 @@ export default function MobileNav() {
               <Link
                 key={item.path}
                 href={item.path}
-                className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all active:scale-95 ${
+                className={`px-3.5 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] transition-all active:scale-95 ${
                   isActive
                     ? 'bg-[#004225] text-white shadow-sm'
                     : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
                 }`}
                 aria-label={item.name}
               >
-                {item.name}
+                {label(item)}
               </Link>
             );
           })}
@@ -52,7 +75,7 @@ export default function MobileNav() {
                 }`}
                 aria-label={item.name}
               >
-                {item.name}
+                {label(item)}
               </Link>
             );
           })}

@@ -1,209 +1,89 @@
 "use client";
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { startOfWeek, format } from 'date-fns';
+import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
 import {
-  buildShoppingStateKey,
-  inferCanonicalIngredient,
-  inferPreparationNote,
-} from '../../lib/ingredient-normalization';
+  fetchShoppingSnapshot,
+  formatQuantity,
+  readShoppingCache,
+  subscribeToShoppingChanges,
+  type AggregatedIngredient,
+} from '../../lib/shopping';
 
 interface ManualShoppingItem {
   id: string;
   item_name: string;
-  created_at?: string;
-}
-
-interface IngredientAlias {
-  raw_term: string;
-  canonical_name: string;
-}
-
-interface IngredientPrepDetail {
-  label: string;
-  amount: number;
-  unit: string;
-  recipeTitles: string[];
-}
-
-interface AggregatedIngredient {
-  state_key: string;
-  canonical_name: string;
-  recipeTitles: string[];
-  prep_details: IngredientPrepDetail[];
 }
 
 export default function ShoppingList() {
-  const [mealPlans, setMealPlans] = useState<any[]>([]);
-  const [aggregatedIngredients, setAggregatedIngredients] = useState<AggregatedIngredient[]>([]);
-  const [shoppingState, setShoppingState] = useState<Record<string, boolean>>({});
-  const [pendingShoppingState, setPendingShoppingState] = useState<Record<string, boolean>>({});
-  const [aliases, setAliases] = useState<IngredientAlias[]>([]);
+  const [list, setList] = useState<AggregatedIngredient[]>([]);
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [manualItems, setManualItems] = useState<ManualShoppingItem[]>([]);
-  const [deletingManualItemIds, setDeletingManualItemIds] = useState<string[]>([]);
+  const [planCount, setPlanCount] = useState(0);
   const [newManualItem, setNewManualItem] = useState('');
   const [addingManualItem, setAddingManualItem] = useState(false);
+  const [deletingManualItemIds, setDeletingManualItemIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [offline, setOffline] = useState(false);
 
-  // Set the week start for reference labels
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-
-  async function fetchMealPlans() {
-    const { data } = await supabase
-      .from('meal_plans')
-      .select(`*, recipe:recipes (id, title, ingredients (*))`)
-      .order('day_of_week');
-    
-    if (data) setMealPlans(data);
-  }
-
-  async function fetchShoppingState() {
-    const { data } = await supabase
-      .from('shopping_list_state')
-      .select('item_name, is_checked');
-
-    if (!data) return;
-
-    const stateMap: Record<string, boolean> = {};
-    data.forEach((row: { item_name: string; is_checked: boolean }) => {
-      stateMap[row.item_name.trim().toLowerCase()] = row.is_checked;
-    });
-    setShoppingState(stateMap);
-  }
-
-  async function fetchManualItems() {
-    const { data } = await supabase
-      .from('shopping_list_manual_items')
-      .select('id, item_name, created_at')
-      .order('created_at', { ascending: false });
-
-    if (data) {
-      setManualItems(data);
+  const load = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const snapshot = await fetchShoppingSnapshot();
+      setList(snapshot.list);
+      setChecked(snapshot.checked);
+      setManualItems(snapshot.manual);
+      setPlanCount(snapshot.plans.length);
+      setOffline(false);
+    } catch {
+      setOffline(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  }
+  }, []);
 
-  async function fetchAliases() {
-    const { data } = await supabase
-      .from('ingredient_aliases')
-      .select('raw_term, canonical_name');
-
-    if (data) {
-      // More specific aliases first to avoid broad-term collisions.
-      const sorted = [...data].sort((a, b) => b.raw_term.length - a.raw_term.length);
-      setAliases(sorted);
+  useEffect(() => {
+    // Show the last list instantly (works in the store with bad signal), then refresh.
+    const cached = readShoppingCache();
+    if (cached) {
+      setList(cached.list);
+      setChecked(cached.checked);
+      setManualItems(cached.manual);
+      setPlanCount(cached.plans.length);
+      setLoading(false);
     }
-  }
+    load();
+    const unsubscribe = subscribeToShoppingChanges(load);
+    const onVisible = () => document.visibilityState === 'visible' && load();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      unsubscribe();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [load]);
 
-  const aggregateIngredients = useCallback(() => {
-    const ingredientMap = new Map<string, AggregatedIngredient>();
-
-    mealPlans.forEach((meal) => {
-      meal.recipe?.ingredients?.forEach((ing: any) => {
-        const inferredCanonical = (ing.canonical_name?.trim() || inferCanonicalIngredient(ing.item_name || '')).trim();
-        const sourceText = `${ing.item_name || ''} ${inferredCanonical}`.toLowerCase();
-        const aliasMatch = aliases.find((alias) => sourceText.includes(alias.raw_term.toLowerCase()));
-        const canonicalName = (aliasMatch?.canonical_name || inferredCanonical).trim();
-        const unit = (ing.unit || 'item').trim();
-        // Group by canonical ingredient name across unit/prep variants.
-        const canonicalGroupKey = canonicalName.toLowerCase();
-        const stateKey = buildShoppingStateKey(canonicalName, 'all');
-        const amount = Number(ing.amount || 0);
-        const recipeTitle = meal.recipe?.title || 'Recipe';
-        const prepLabel = (ing.preparation_note?.trim() || inferPreparationNote(ing.item_name || '', canonicalName) || 'General').trim();
-        
-        if (ingredientMap.has(canonicalGroupKey)) {
-          const existing = ingredientMap.get(canonicalGroupKey)!;
-          if (!existing.recipeTitles.includes(recipeTitle)) {
-            existing.recipeTitles.push(recipeTitle);
-          }
-
-          const existingPrep = existing.prep_details.find(
-            (prep) => prep.label === prepLabel && prep.unit === unit
-          );
-          if (existingPrep) {
-            existingPrep.amount += amount;
-            if (!existingPrep.recipeTitles.includes(recipeTitle)) {
-              existingPrep.recipeTitles.push(recipeTitle);
-            }
-          } else {
-            existing.prep_details.push({
-              label: prepLabel,
-              amount,
-              unit,
-              recipeTitles: [recipeTitle],
-            });
-          }
-        } else {
-          ingredientMap.set(canonicalGroupKey, {
-            state_key: stateKey,
-            canonical_name: canonicalName,
-            recipeTitles: [recipeTitle],
-            prep_details: [
-              {
-                label: prepLabel,
-                amount,
-                unit,
-                recipeTitles: [recipeTitle],
-              },
-            ],
-          });
-        }
-      });
-    });
-
-    const aggregated = Array.from(ingredientMap.values()).sort((a, b) =>
-      a.canonical_name.localeCompare(b.canonical_name)
-    );
-
-    aggregated.forEach((item) => {
-      item.prep_details.sort((a, b) => a.label.localeCompare(b.label));
-    });
-
-    setAggregatedIngredients(aggregated);
-  }, [mealPlans, aliases]);
-
-  async function loadShoppingPageData() {
-    await Promise.all([fetchMealPlans(), fetchShoppingState(), fetchManualItems(), fetchAliases()]);
-    setLoading(false);
-  }
-
-  async function toggleItem(stateKey: string, currentState: boolean) {
-    const normalized = stateKey.trim().toLowerCase();
-    if (normalized in pendingShoppingState) return;
-
-    const nextState = !currentState;
-
-    setPendingShoppingState((prev) => ({
-      ...prev,
-      [normalized]: nextState,
-    }));
+  async function setItemChecked(stateKey: string, next: boolean) {
+    const key = stateKey.trim().toLowerCase();
+    setChecked((prev) => ({ ...prev, [key]: next })); // optimistic
 
     const { error } = await supabase
       .from('shopping_list_state')
-      .upsert(
-        {
-          item_name: normalized,
-          is_checked: nextState,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'item_name' }
-      );
+      .upsert({ item_name: key, is_checked: next, updated_at: new Date().toISOString() }, { onConflict: 'item_name' });
 
-    if (!error) {
-      setShoppingState((prev) => ({
-        ...prev,
-        [normalized]: nextState,
-      }));
-    }
+    if (error) setChecked((prev) => ({ ...prev, [key]: !next }));
+  }
 
-    setPendingShoppingState((prev) => {
-      const next = { ...prev };
-      delete next[normalized];
-      return next;
-    });
+  async function uncheckAll() {
+    const keys = list.map((item) => item.state_key).filter((key) => checked[key]);
+    if (keys.length === 0) return;
+    setChecked((prev) => Object.fromEntries(Object.entries(prev).map(([key, value]) => [key, keys.includes(key) ? false : value])));
+    await supabase
+      .from('shopping_list_state')
+      .upsert(keys.map((item_name) => ({ item_name, is_checked: false, updated_at: new Date().toISOString() })), { onConflict: 'item_name' });
   }
 
   async function addManualItem() {
@@ -214,16 +94,12 @@ export default function ShoppingList() {
     const { data, error } = await supabase
       .from('shopping_list_manual_items')
       .insert([{ item_name: trimmed }])
-      .select('id, item_name, created_at')
+      .select('id, item_name')
       .single();
 
     if (error) {
       alert(error.message || 'Could not add item.');
-      setAddingManualItem(false);
-      return;
-    }
-
-    if (data) {
+    } else if (data) {
       setManualItems((prev) => [data, ...prev]);
       setNewManualItem('');
     }
@@ -232,205 +108,138 @@ export default function ShoppingList() {
 
   async function deleteManualItem(id: string) {
     if (deletingManualItemIds.includes(id)) return;
-
     setDeletingManualItemIds((prev) => [...prev, id]);
-    const itemToRestore = manualItems.find((item) => item.id === id);
 
-    const { error } = await supabase
-      .from('shopping_list_manual_items')
-      .delete()
-      .eq('id', id);
-
-    if (!error) {
-      setManualItems((prev) => prev.filter((item) => item.id !== id));
-    } else if (itemToRestore) {
-      alert(error.message || 'Could not remove item.');
-    }
+    const { error } = await supabase.from('shopping_list_manual_items').delete().eq('id', id);
+    if (error) alert(error.message || 'Could not remove item.');
+    else setManualItems((prev) => prev.filter((item) => item.id !== id));
 
     setDeletingManualItemIds((prev) => prev.filter((itemId) => itemId !== id));
   }
 
-  useEffect(() => { loadShoppingPageData(); }, []);
-  useEffect(() => { aggregateIngredients(); }, [mealPlans, aggregateIngredients]);
+  const toBuy = useMemo(() => list.filter((item) => !checked[item.state_key]), [list, checked]);
+  const inCart = useMemo(() => list.filter((item) => checked[item.state_key]), [list, checked]);
 
-  useEffect(() => {
-    const aliasChannel = supabase
-      .channel('ingredient-aliases-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ingredient_aliases' }, () => {
-        fetchAliases();
-      })
-      .subscribe();
+  if (loading) {
+    return <div className="p-20 text-center text-slate-900 font-black animate-pulse">Loading your list...</div>;
+  }
 
-    return () => {
-      supabase.removeChannel(aliasChannel);
-    };
-  }, []);
-
-  const orderedIngredients = [...aggregatedIngredients].sort((a, b) => {
-    const aChecked = shoppingState[a.state_key.trim().toLowerCase()] || false;
-    const bChecked = shoppingState[b.state_key.trim().toLowerCase()] || false;
-
-    if (aChecked !== bChecked) {
-      return aChecked ? 1 : -1;
-    }
-
-    return a.canonical_name.localeCompare(b.canonical_name);
-  });
-
-  if (loading) return (
-    <div className="p-20 text-center text-slate-900 font-black animate-pulse">
-      Building your shopping list...
-    </div>
+  const renderItem = (item: AggregatedIngredient, isChecked: boolean) => (
+    <label
+      key={item.state_key}
+      className="flex items-center gap-4 p-4 bg-slate-50 rounded-3xl border border-slate-100 active:bg-slate-100 transition-colors cursor-pointer"
+    >
+      <input
+        type="checkbox"
+        checked={isChecked}
+        onChange={() => setItemChecked(item.state_key, !isChecked)}
+        className="w-7 h-7 rounded-full border-2 border-slate-300 appearance-none checked:bg-[#004225] checked:border-[#004225] transition-all shrink-0"
+      />
+      <div className="min-w-0">
+        <span className={`font-bold text-lg block capitalize leading-tight ${isChecked ? 'text-slate-300 line-through' : 'text-slate-900'}`}>
+          {item.canonical_name}
+        </span>
+        <div className={`text-[11px] font-bold tracking-tight space-y-0.5 ${isChecked ? 'text-slate-300' : 'text-slate-500'}`}>
+          {item.prep_details.map((prep) => (
+            <div key={`${item.state_key}-${prep.label}-${prep.unit}`}>
+              {formatQuantity(prep.amount, prep.unit)}
+              {prep.label !== 'General' ? ` (${prep.label})` : ''} · {prep.recipeTitles.join(' · ')}
+            </div>
+          ))}
+        </div>
+      </div>
+    </label>
   );
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-white to-slate-100 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
       <Header />
 
-      <div className="mb-10">
-        <h1 className="page-title-brand text-3xl sm:text-4xl">
-          Shopping List
-        </h1>
-        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">
-          Week of {format(weekStart, 'MMM d')}
-        </p>
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="page-title-brand text-3xl sm:text-4xl">Shopping List</h1>
+          <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">
+            {toBuy.length + manualItems.length} to get{inCart.length ? ` · ${inCart.length} in cart` : ''}
+            {refreshing ? ' · syncing…' : ''}
+            {offline ? ' · offline, showing last list' : ''}
+          </p>
+        </div>
       </div>
 
-      {/* Manual Items: separate from recipe ingredients and removable */}
-      <section className="mb-8 bg-amber-50 border border-amber-200 rounded-3xl p-4">
-        <h2 className="text-xs font-black text-amber-700 uppercase tracking-[0.2em] mb-3">
-          Extras To Buy
-        </h2>
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            value={newManualItem}
-            onChange={(e) => setNewManualItem(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addManualItem();
-              }
-            }}
-            placeholder="Add non-recipe item (e.g. paper towels)"
-            className="flex-1 bg-white border border-amber-300 rounded-xl px-3 py-2 text-sm font-medium text-slate-900"
-          />
-          <button
-            onClick={addManualItem}
-            disabled={addingManualItem || !newManualItem.trim()}
-            className="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-bold disabled:opacity-50"
-          >
-            Add
-          </button>
-        </div>
+      {/* Quick add stays at the top: it's the thing you do mid-cook. */}
+      <div className="flex gap-2 mb-6">
+        <input
+          type="text"
+          value={newManualItem}
+          onChange={(e) => setNewManualItem(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              addManualItem();
+            }
+          }}
+          placeholder="Add anything (paper towels, milk…)"
+          enterKeyHint="done"
+          className="flex-1 min-w-0 bg-white border border-slate-300 rounded-xl px-4 py-3 text-base font-medium text-slate-900"
+        />
+        <button
+          onClick={addManualItem}
+          disabled={addingManualItem || !newManualItem.trim()}
+          className="px-5 py-3 rounded-xl bg-[#004225] text-white text-sm font-bold disabled:opacity-40"
+        >
+          Add
+        </button>
+      </div>
 
-        {manualItems.length > 0 ? (
-          <div className="space-y-2">
-            {manualItems.map((item) => (
-              <div
-                key={item.id}
-                className={`flex items-center justify-between bg-white border border-amber-200 rounded-2xl px-4 py-3 transition-all duration-200 ${deletingManualItemIds.includes(item.id) ? 'pointer-events-none scale-[0.98] opacity-50' : ''}`}
-              >
-                <span className="font-semibold text-slate-900 capitalize">{item.item_name}</span>
-                <button
-                  onClick={() => deleteManualItem(item.id)}
-                  disabled={deletingManualItemIds.includes(item.id)}
-                  className="text-xs font-black uppercase tracking-wider text-red-600 disabled:opacity-60"
-                >
-                  {deletingManualItemIds.includes(item.id) ? 'Removing…' : 'Remove'}
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs font-medium text-amber-700">No extra items yet.</p>
-        )}
-      </section>
-
-      {aggregatedIngredients.length > 0 ? (
-        <div className="space-y-8">
-          {/* 1. High-Contrast Ingredients Checklist */}
-          <div className="space-y-2">
-            {orderedIngredients.map((item, i) => (
-              (() => {
-                const normalizedStateKey = item.state_key.trim().toLowerCase();
-                const isPending = normalizedStateKey in pendingShoppingState;
-                const isChecked = pendingShoppingState[normalizedStateKey] ?? shoppingState[normalizedStateKey] ?? false;
-                return (
-              <label 
-                key={`${item.state_key}-${i}`} 
-                className={`flex items-center justify-between p-5 bg-slate-50 rounded-3xl border active:bg-slate-100 transition-all cursor-pointer group ${isPending ? 'pointer-events-none border-emerald-300 bg-emerald-50/70 opacity-80' : 'border-slate-100'}`}
-              >
-                <div className="flex items-center gap-4">
-                  {/* British Racing Green Checkbox */}
-                  <input 
-                    type="checkbox" 
-                    checked={isChecked}
-                    disabled={isPending}
-                    onChange={() => toggleItem(item.state_key, isChecked)}
-                    className="w-6 h-6 rounded-full border-2 border-slate-300 appearance-none checked:bg-[#004225] checked:border-[#004225] transition-all shrink-0" 
-                  />
-                  <div>
-                    <span className={`font-bold text-lg block capitalize leading-tight ${isChecked ? 'text-slate-300 line-through' : 'text-slate-900'}`}>
-                      {item.canonical_name}
-                    </span>
-                    <div className={`text-[10px] font-black uppercase tracking-tight space-y-1 ${isChecked ? 'text-slate-200' : 'text-slate-500'}`}>
-                      {item.prep_details.map((prep) => (
-                        <div key={`${item.state_key}-${prep.label}-${prep.unit}`}>
-                          {prep.label === 'General'
-                            ? `${prep.amount} ${prep.unit} • ${prep.recipeTitles.join(' • ')}`
-                            : `${prep.amount} ${prep.unit} (${prep.label}) • ${prep.recipeTitles.join(' • ')}`}
-                        </div>
-                      ))}
-                    </div>
-                    {isPending ? (
-                      <div className="mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700 animate-pulse">
-                        Updating...
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </label>
-                );
-              })()
-            ))}
-          </div>
-
-          {/* 2. Restored Planned Recipes Reference Card */}
-          <section className="mt-12 pt-8 border-t border-slate-100">
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">
-              Planned Recipes
-            </h2>
-            <div className="grid grid-cols-1 gap-3">
-              {mealPlans.map((meal) => (
-                <Link 
-                  key={meal.id} 
-                  href={`/recipes/${meal.recipe?.id}`} 
-                  className="flex items-center justify-between p-5 bg-white border border-slate-200 rounded-2xl active:bg-slate-50 transition-all shadow-sm group"
-                >
-                  <span className="font-bold text-slate-900 group-hover:text-[#004225]">
-                    {meal.recipe?.title}
-                  </span>
-                  <svg className="w-5 h-5 text-slate-300 group-hover:text-[#004225] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              ))}
-            </div>
-          </section>
-        </div>
-      ) : (
+      {toBuy.length === 0 && manualItems.length === 0 && inCart.length === 0 ? (
         <div className="py-20 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-          <p className="text-slate-400 font-bold italic">
-            {manualItems.length > 0 ? 'No recipe ingredients right now.' : 'No meals planned yet.'}
-          </p>
+          <p className="text-slate-400 font-bold italic">{planCount === 0 ? 'No meals planned yet.' : 'Nothing on the list.'}</p>
           <Link href="/meal-plan" className="inline-block mt-4 text-[#004225] font-black uppercase text-xs tracking-widest">
             Go to Plan →
           </Link>
         </div>
+      ) : (
+        <div className="space-y-8">
+          {manualItems.length > 0 && (
+            <section>
+              <h2 className="text-[11px] font-black text-amber-700 uppercase tracking-[0.2em] mb-2">Extras</h2>
+              <div className="space-y-2">
+                {manualItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex items-center justify-between bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 ${deletingManualItemIds.includes(item.id) ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <span className="font-semibold text-slate-900 capitalize">{item.item_name}</span>
+                    <button
+                      onClick={() => deleteManualItem(item.id)}
+                      className="text-xs font-black uppercase tracking-wider text-red-600 px-2 py-2"
+                      aria-label={`Remove ${item.item_name}`}
+                    >
+                      Got it
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {toBuy.length > 0 && <div className="space-y-2">{toBuy.map((item) => renderItem(item, false))}</div>}
+
+          {inCart.length > 0 && (
+            <details className="group">
+              <summary className="flex items-center justify-between cursor-pointer list-none py-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 [&::-webkit-details-marker]:hidden">
+                <span>In cart ({inCart.length})</span>
+                <span aria-hidden="true" className="text-base transition-transform group-open:rotate-45">+</span>
+              </summary>
+              <div className="space-y-2 mt-2">{inCart.map((item) => renderItem(item, true))}</div>
+              <button onClick={uncheckAll} className="mt-4 text-xs font-black uppercase tracking-widest text-slate-500 px-1 py-2">
+                Uncheck all
+              </button>
+            </details>
+          )}
+        </div>
       )}
 
-      {/* Floating Navigation */}
       <MobileNav />
     </main>
   );
