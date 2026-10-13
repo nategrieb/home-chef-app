@@ -37,6 +37,35 @@ function Centered({ children }: { children: ReactNode }) {
   )
 }
 
+/** Shown to someone who is signed in but has no access to The Menu. */
+export function NoAccessCard({ email }: { email: string | null }) {
+  return (
+    <Centered>
+      <div className="border border-slate-200 bg-white px-6 py-8 text-center shadow-[0_16px_36px_rgba(15,23,42,0.06)] sm:px-8">
+        <div className="brand-mark-triangle mx-auto mb-5" aria-hidden="true" />
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">No access yet</h1>
+        <p className="mt-2 text-sm text-slate-500">
+          {email ? `You're signed in as ${email}, but ` : ''}this account doesn&apos;t have access to The Menu. Ask Nate to add you, or
+          head back to see the apps you can use.
+        </p>
+        <a
+          href="https://www.nategrieb.com"
+          className="mt-6 block w-full border border-[#004225] bg-[#004225] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
+        >
+          Back to nategrieb.com
+        </a>
+        <button
+          type="button"
+          onClick={signOutOfMenu}
+          className="mt-2 w-full px-5 py-2.5 text-sm font-medium text-slate-500 transition hover:text-slate-800"
+        >
+          Sign out
+        </button>
+      </div>
+    </Centered>
+  )
+}
+
 /**
  * Wraps every page. Signed-out visitors are sent to /login (the proxy does this before the page
  * loads; this is the backstop for an expired session). Signed-in people are checked against the
@@ -92,25 +121,7 @@ export default function AccessGate({ children }: { children: ReactNode }) {
   if (isPublicPath || state.status === 'allowed') return <>{children}</>
 
   if (state.status === 'denied') {
-    return (
-      <Centered>
-        <div className="border border-slate-200 bg-white px-6 py-8 text-center shadow-[0_16px_36px_rgba(15,23,42,0.06)] sm:px-8">
-          <div className="brand-mark-triangle mx-auto mb-5" aria-hidden="true" />
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">No access yet</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            {state.email ? `You're signed in as ${state.email}, but ` : ''}this account doesn&apos;t have access to The Menu. Ask Nate to
-            add you.
-          </p>
-          <button
-            type="button"
-            onClick={signOutOfMenu}
-            className="mt-6 w-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 active:scale-95"
-          >
-            Sign out
-          </button>
-        </div>
-      </Centered>
-    )
+    return <NoAccessCard email={state.email} />
   }
 
   if (state.status === 'error') {
