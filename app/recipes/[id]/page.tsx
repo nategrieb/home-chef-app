@@ -17,7 +17,7 @@ const DIET_OPTIONS = [
   'Low-Carb',
 ] as const;
 
-const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'item', 'pinch', 'clove', 'slice', 'can', 'bunch', 'block'] as const;
+const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'item', 'pinch', 'clove', 'slice', 'can', 'bunch', 'block', 'head', 'carton', 'bag', 'package', 'container'] as const;
 const WEEKDAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
 const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {

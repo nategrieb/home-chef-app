@@ -6,7 +6,7 @@ import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
 import {
   fetchShoppingSnapshot,
-  formatQuantity,
+  formatShopQuantity,
   readShoppingCache,
   subscribeToShoppingChanges,
   type AggregatedIngredient,
@@ -136,16 +136,14 @@ export default function ShoppingList() {
         className="w-7 h-7 rounded-full border-2 border-slate-300 appearance-none checked:bg-[#004225] checked:border-[#004225] transition-all shrink-0"
       />
       <div className="min-w-0">
-        <span className={`font-bold text-lg block capitalize leading-tight ${isChecked ? 'text-slate-300 line-through' : 'text-slate-900'}`}>
+        <span className={`font-bold text-lg block leading-tight ${isChecked ? 'text-slate-300 line-through' : 'text-slate-900'}`}>
           {item.canonical_name}
+          {formatShopQuantity(item.prep_details) ? (
+            <span className={`ml-2 text-base font-black ${isChecked ? 'text-slate-300' : 'text-[#004225]'}`}>{formatShopQuantity(item.prep_details)}</span>
+          ) : null}
         </span>
-        <div className={`text-[11px] font-bold tracking-tight space-y-0.5 ${isChecked ? 'text-slate-300' : 'text-slate-500'}`}>
-          {item.prep_details.map((prep) => (
-            <div key={`${item.state_key}-${prep.label}-${prep.unit}`}>
-              {formatQuantity(prep.amount, prep.unit)}
-              {prep.label !== 'General' ? ` (${prep.label})` : ''} · {prep.recipeTitles.join(' · ')}
-            </div>
-          ))}
+        <div className={`text-[11px] font-bold tracking-tight truncate ${isChecked ? 'text-slate-300' : 'text-slate-500'}`}>
+          {item.recipeTitles.join(' · ')}
         </div>
       </div>
     </label>

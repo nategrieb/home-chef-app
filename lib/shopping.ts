@@ -40,6 +40,11 @@ const UNIT_ALIASES: Record<string, string> = {
   pinch: 'pinch', pinches: 'pinch',
   block: 'block', blocks: 'block',
   slice: 'slice', slices: 'slice',
+  head: 'head', heads: 'head',
+  carton: 'carton', cartons: 'carton',
+  bag: 'bag', bags: 'bag',
+  package: 'package', packages: 'package', pkg: 'package',
+  container: 'container', containers: 'container',
   // "whole thing" counts all mean the same on a shopping list
   '': 'item', item: 'item', items: 'item', count: 'item', pcs: 'item', pc: 'item', piece: 'item', pieces: 'item',
   large: 'item', medium: 'item', small: 'item', each: 'item',
@@ -51,7 +56,26 @@ export function normalizeUnit(unit: string | null | undefined): string {
   return UNIT_ALIASES[key] ?? key;
 }
 
-const PLURALS: Record<string, string> = { cup: 'cups', clove: 'cloves', can: 'cans', bunch: 'bunches', pinch: 'pinches', block: 'blocks', slice: 'slices' };
+const PLURALS: Record<string, string> = {
+  cup: 'cups', clove: 'cloves', can: 'cans', bunch: 'bunches', pinch: 'pinches', block: 'blocks', slice: 'slices',
+  head: 'heads', carton: 'cartons', bag: 'bags', package: 'packages', container: 'containers',
+};
+
+/** Measures you cook with, not things you buy. The list shows just the name for these (you buy a jar, not 2 tbsp). */
+const MEASURE_UNITS = new Set(['tsp', 'tbsp', 'cup', 'oz', 'ml', 'l', 'g', 'kg', 'pinch']);
+
+/**
+ * What to pick up at the store for one ingredient across all recipes: "3 cans", "2 lb", "5" (items).
+ * Returns '' for pantry staples that are only measured, so the list shows the name alone.
+ */
+export function formatShopQuantity(prepDetails: { amount: number; unit: string }[]): string {
+  const totals = new Map<string, number>();
+  for (const { amount, unit } of prepDetails) {
+    if (MEASURE_UNITS.has(unit) || !(amount > 0)) continue;
+    totals.set(unit, (totals.get(unit) ?? 0) + amount);
+  }
+  return [...totals].map(([unit, amount]) => formatQuantity(amount, unit)).join(' + ');
+}
 
 /** "2 cups", "1 lb", "3" (for plain items) with tidy decimals. */
 export function formatQuantity(amount: number, unit: string): string {
