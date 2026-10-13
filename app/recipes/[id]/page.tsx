@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import MobileNav from '../../../components/MobileNav';
 import Header from '../../../components/Header';
 import { inferCanonicalIngredient, inferPreparationNote } from '../../../lib/ingredient-normalization';
-import { normalizeUnit } from '../../../lib/shopping';
+import { formatQuantity, normalizeUnit } from '../../../lib/shopping';
 
 const DIET_OPTIONS = [
   'Vegan',
@@ -135,11 +135,16 @@ export default function RecipeDetail() {
     if (validIngredients.length > 0) {
         const ingsWithId = validIngredients.map(ing => {
           const normalizedName = ing.item_name.trim();
-          const canonicalName = inferCanonicalIngredient(normalizedName);
+          // Keep hand-cleaned fields when the name wasn't edited; only re-infer for new/renamed rows.
+          const original = recipe?.ingredients?.find((o: any) => o.id === ing.id);
+          const unchangedName = original && original.item_name?.trim() === normalizedName;
+          const canonicalName = unchangedName && original.canonical_name ? original.canonical_name : inferCanonicalIngredient(normalizedName);
 
           return {
             canonical_name: canonicalName,
-            preparation_note: inferPreparationNote(normalizedName, canonicalName),
+            preparation_note: unchangedName ? original.preparation_note ?? null : inferPreparationNote(normalizedName, canonicalName),
+            shop_amount: unchangedName ? original.shop_amount ?? null : null,
+            shop_unit: unchangedName ? original.shop_unit ?? null : null,
             item_name: normalizedName,
             amount: ing.amount || 0,
             unit: normalizeUnit(ing.unit),
@@ -747,8 +752,11 @@ export default function RecipeDetail() {
                 ) : (
                   <label className="flex items-center gap-4 w-full cursor-pointer group">
                     <input type="checkbox" className="w-6 h-6 rounded-none border-2 border-slate-300 appearance-none checked:bg-[#004225] transition-all shrink-0" />
-                    <span className="font-bold text-slate-900 group-has-[:checked]:text-slate-300 group-has-[:checked]:line-through flex-1">{ing.item_name}</span>
-                    <span className="text-sm font-black text-slate-400 uppercase shrink-0">{ing.amount}{ing.unit}</span>
+                    <span className="flex-1 min-w-0 group-has-[:checked]:text-slate-300 group-has-[:checked]:line-through">
+                      <span className="font-bold text-slate-900 group-has-[:checked]:text-slate-300 block">{ing.item_name}</span>
+                      {ing.preparation_note ? <span className="block text-xs font-medium text-slate-500 group-has-[:checked]:text-slate-300">{ing.preparation_note}</span> : null}
+                    </span>
+                    <span className="text-sm font-black text-slate-400 shrink-0">{formatQuantity(Number(ing.amount) || 0, ing.unit)}</span>
                   </label>
                 )}
               </div>
