@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 
@@ -7,11 +7,20 @@ const manrope = Manrope({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#ffffff",
+};
+
 export const metadata: Metadata = {
   title: "∆ THE MENU",
   description: "Home Chef app",
+  appleWebApp: { capable: true, title: "THE MENU", statusBarStyle: "default" },
   icons: {
     icon: '/triangle.svg',
+    apple: '/apple-touch-icon.png',
   },
 };
 

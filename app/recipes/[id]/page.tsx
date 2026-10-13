@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import MobileNav from '../../../components/MobileNav';
 import Header from '../../../components/Header';
 import { inferCanonicalIngredient, inferPreparationNote } from '../../../lib/ingredient-normalization';
+import { normalizeUnit } from '../../../lib/shopping';
 
 const DIET_OPTIONS = [
   'Vegan',
@@ -16,7 +17,7 @@ const DIET_OPTIONS = [
   'Low-Carb',
 ] as const;
 
-const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'pinch', 'clove', 'slice', 'can'] as const;
+const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'item', 'pinch', 'clove', 'slice', 'can', 'bunch', 'block'] as const;
 const WEEKDAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
 const DIET_EMOJI: Record<(typeof DIET_OPTIONS)[number], string> = {
@@ -72,7 +73,7 @@ export default function RecipeDetail() {
     }
     setTotalTime(data.total_time || '');
     setTags(data.tags || []);
-    setIngredients(data.ingredients || []);
+    setIngredients((data.ingredients || []).map((ing: any) => ({ ...ing, unit: normalizeUnit(ing.unit) })));
     setInstructions(data.instructions || []);
     setImageLoadFailed(false);
   };
@@ -141,7 +142,7 @@ export default function RecipeDetail() {
             preparation_note: inferPreparationNote(normalizedName, canonicalName),
             item_name: normalizedName,
             amount: ing.amount || 0,
-            unit: ing.unit.trim() || 'g',
+            unit: normalizeUnit(ing.unit),
             recipe_id: params.id,
             calories_per_unit: 0,
           };
@@ -177,7 +178,7 @@ export default function RecipeDetail() {
     let nextIndex = 0;
     setIngredients((prev) => {
       nextIndex = prev.length;
-      return [...prev, { item_name: '', amount: '', unit: 'g' }];
+      return [...prev, { item_name: '', amount: '', unit: 'item' }];
     });
 
     if (focusNewRow) {

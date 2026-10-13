@@ -31,7 +31,7 @@ export default function AddRecipe() {
         recipe_id: recipe.id,
         item_name: '',
         amount: 0,
-        unit: 'g',
+        unit: 'item',
         calories_per_unit: 0
       }]);
 

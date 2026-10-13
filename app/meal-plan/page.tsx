@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { format, startOfWeek } from 'date-fns';
 import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
-import { buildShoppingStateKey, inferCanonicalIngredient } from '../../lib/ingredient-normalization';
+import { markRecipeIngredientsUnchecked } from '../../lib/shopping';
 
 export default function MealPlan() {
   const [mealPlans, setMealPlans] = useState<any[]>([]);
@@ -36,36 +36,8 @@ export default function MealPlan() {
     if (!recipeId) return;
     const { error } = await supabase.from('meal_plans').insert([{ recipe_id: recipeId, day_of_week: dayIndex }]);
     if (!error) {
-      // Mark ingredients for the newly-added recipe as unchecked so shopping list stays state-aware.
-      const { data: recipeIngredients } = await supabase
-        .from('ingredients')
-        .select('item_name, unit, canonical_name')
-        .eq('recipe_id', recipeId);
-
-      const ingredientNames = Array.from(
-        new Set(
-          (recipeIngredients || [])
-            .map((row: { item_name: string; unit?: string; canonical_name?: string | null }) => {
-              const canonical = row.canonical_name?.trim() || inferCanonicalIngredient(row.item_name || '');
-              return buildShoppingStateKey(canonical, row.unit || 'item');
-            })
-            .filter(Boolean)
-        )
-      );
-
-      if (ingredientNames.length > 0) {
-        await supabase
-          .from('shopping_list_state')
-          .upsert(
-            ingredientNames.map((itemName) => ({
-              item_name: itemName,
-              is_checked: false,
-              updated_at: new Date().toISOString(),
-            })),
-            { onConflict: 'item_name' }
-          );
-      }
-
+      // Make the recipe's ingredients show up unchecked on the shopping list.
+      await markRecipeIngredientsUnchecked(recipeId);
       fetchData();
       setSelectedDate('');
       setSelectedRecipe('');
@@ -75,35 +47,9 @@ export default function MealPlan() {
   async function removeMealFromPlan(mealPlanId: string) {
     setRemovingId(mealPlanId);
 
-    // Uncheck all shopping list items for this recipe before removing it
     const meal = mealPlans.find(p => p.id === mealPlanId);
     if (meal?.recipe?.id) {
-      const { data: recipeIngredients } = await supabase
-        .from('ingredients')
-        .select('item_name, unit, canonical_name')
-        .eq('recipe_id', meal.recipe.id);
-
-      const ingredientKeys = Array.from(
-        new Set(
-          (recipeIngredients || []).map((row: { item_name: string; unit?: string; canonical_name?: string | null }) => {
-            const canonical = row.canonical_name?.trim() || inferCanonicalIngredient(row.item_name || '');
-            return buildShoppingStateKey(canonical, row.unit || 'item');
-          }).filter(Boolean)
-        )
-      );
-
-      if (ingredientKeys.length > 0) {
-        await supabase
-          .from('shopping_list_state')
-          .upsert(
-            ingredientKeys.map((itemName) => ({
-              item_name: itemName,
-              is_checked: false,
-              updated_at: new Date().toISOString(),
-            })),
-            { onConflict: 'item_name' }
-          );
-      }
+      await markRecipeIngredientsUnchecked(meal.recipe.id);
     }
 
     setTimeout(async () => {

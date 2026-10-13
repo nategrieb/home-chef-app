@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import RecipeCard from '../components/RecipeCard';
 import MobileNav from '../components/MobileNav';
 import Header from '../components/Header';
-import { buildShoppingStateKey, inferCanonicalIngredient } from '../lib/ingredient-normalization';
+import { markRecipeIngredientsUnchecked } from '../lib/shopping';
 import Link from 'next/link';
 
 const DIET_OPTIONS = [
@@ -125,35 +125,8 @@ export default function Home() {
       return;
     }
 
-    // Keep shopping state aligned with newly added meals.
-    const { data: recipeIngredients } = await supabase
-      .from('ingredients')
-      .select('item_name, unit, canonical_name')
-      .eq('recipe_id', recipeId);
-
-    const ingredientNames = Array.from(
-      new Set(
-        (recipeIngredients || [])
-          .map((row: { item_name: string; unit?: string; canonical_name?: string | null }) => {
-            const canonical = row.canonical_name?.trim() || inferCanonicalIngredient(row.item_name || '');
-            return buildShoppingStateKey(canonical, row.unit || 'item');
-          })
-          .filter(Boolean)
-      )
-    );
-
-    if (ingredientNames.length > 0) {
-      await supabase
-        .from('shopping_list_state')
-        .upsert(
-          ingredientNames.map((itemName) => ({
-            item_name: itemName,
-            is_checked: false,
-            updated_at: new Date().toISOString(),
-          })),
-          { onConflict: 'item_name' }
-        );
-    }
+    // Make the recipe's ingredients show up unchecked on the shopping list.
+    await markRecipeIngredientsUnchecked(recipeId);
 
     alert(`Added to ${WEEKDAY_OPTIONS[dayIndex]}.`);
   };
@@ -196,7 +169,7 @@ export default function Home() {
               recipe_id: recipe.id,
               item_name: '',
               amount: 0,
-              unit: 'g',
+              unit: 'item',
               calories_per_unit: 0
             }]);
 
