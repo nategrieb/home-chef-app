@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
+import AccessGate from "../components/AccessGate";
 
 const manrope = Manrope({
   variable: "--font-body",
@@ -33,7 +34,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${manrope.variable} antialiased flex flex-col min-h-screen`}> 
         <main className="flex-grow">
-          {children}
+          <AccessGate>{children}</AccessGate>
         </main>
         <footer className="sm:hidden py-4 text-center text-xs text-slate-500">
           <a

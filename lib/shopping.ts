@@ -229,6 +229,15 @@ export function readShoppingCache(): ShoppingSnapshot | null {
   }
 }
 
+/** Forget the saved copy of the list (used when someone signs out or has no access). */
+export function clearShoppingCache() {
+  try {
+    window.localStorage.removeItem(CACHE_KEY);
+  } catch {
+    // storage unavailable; nothing to clear
+  }
+}
+
 export function writeShoppingCache(snapshot: ShoppingSnapshot) {
   try {
     window.localStorage.setItem(CACHE_KEY, JSON.stringify(snapshot));
