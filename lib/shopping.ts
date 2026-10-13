@@ -97,6 +97,9 @@ interface IngredientRow {
   preparation_note?: string | null;
   amount?: number | string | null;
   unit?: string | null;
+  /** What to buy for this ingredient, when it differs from the cooking measure (e.g. 4 cloves -> 1 head). */
+  shop_amount?: number | string | null;
+  shop_unit?: string | null;
 }
 
 /** The single place that decides which shopping-list line an ingredient belongs to. */
@@ -124,8 +127,9 @@ export function aggregateShoppingList(
       const canonicalName = resolveCanonicalName(ing, aliases);
       if (!canonicalName) continue;
 
-      const unit = normalizeUnit(ing.unit);
-      const amount = Number(ing.amount || 0);
+      const hasShop = ing.shop_unit && Number(ing.shop_amount) > 0;
+      const unit = normalizeUnit(hasShop ? ing.shop_unit : ing.unit);
+      const amount = Number(hasShop ? ing.shop_amount : ing.amount || 0);
       const prepLabel = (ing.preparation_note?.trim() || inferPreparationNote(ing.item_name || '', canonicalName) || 'General').trim();
       const groupKey = canonicalName.toLowerCase();
 
