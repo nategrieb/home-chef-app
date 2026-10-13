@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
+import PageSkeleton from '../../components/PageSkeleton';
 
 interface OrderIngredient {
   item_name: string;
@@ -264,7 +265,7 @@ export default function SubmitOrderPage() {
   }
 
   if (loading) {
-    return <div className="p-20 text-center text-slate-900 font-bold">Loading order workspace...</div>;
+    return <PageSkeleton title="Submit Order" />;
   }
 
   const submitLabel = saving ? 'Submitting...' : 'Submit Current Order';

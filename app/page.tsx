@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import MobileNav from '../components/MobileNav';
 import Header from '../components/Header';
+import PageSkeleton from '../components/PageSkeleton';
 import {
   fetchShoppingSnapshot,
   formatShopQuantity,
@@ -121,7 +122,7 @@ export default function ShoppingList() {
   const inCart = useMemo(() => list.filter((item) => checked[item.state_key]), [list, checked]);
 
   if (loading) {
-    return <div className="p-20 text-center text-slate-900 font-black animate-pulse">Loading your list...</div>;
+    return <PageSkeleton title="Shopping List" />;
   }
 
   const renderItem = (item: AggregatedIngredient, isChecked: boolean) => (
