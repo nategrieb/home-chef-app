@@ -19,8 +19,8 @@ export default function MobileNav() {
   }, []);
 
   const navItems = [
-    { name: 'List', path: '/shopping-list' },
-    { name: 'Recipes', path: '/' },
+    { name: 'List', path: '/' },
+    { name: 'Recipes', path: '/recipes' },
     { name: 'Plan', path: '/meal-plan' },
     { name: 'Order', path: '/submit-order' },
   ];
@@ -28,7 +28,7 @@ export default function MobileNav() {
   const label = (item: { name: string; path: string }) => (
     <>
       {item.name}
-      {item.path === '/shopping-list' && toGet > 0 ? (
+      {item.path === '/' && toGet > 0 ? (
         <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black leading-5 text-white">
           {toGet}
         </span>

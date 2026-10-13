@@ -5,8 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "THE MENU",
     short_name: "THE MENU",
     description: "Recipes, meal plan and shopping list.",
-    // Opens straight to the shopping list when launched from the home screen.
-    start_url: "/shopping-list",
+    // The shopping list is the homepage.
+    start_url: "/",
     scope: "/",
     display: "standalone",
     background_color: "#ffffff",
@@ -16,8 +16,8 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     shortcuts: [
-      { name: "Shopping list", url: "/shopping-list" },
-      { name: "Recipes", url: "/" },
+      { name: "Shopping list", url: "/" },
+      { name: "Recipes", url: "/recipes" },
       { name: "Meal plan", url: "/meal-plan" },
     ],
   };

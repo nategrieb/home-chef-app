@@ -22,7 +22,7 @@ export default function AddRecipe() {
       if (error) {
         console.error('Error creating blank recipe:', error);
         alert('Error creating new recipe. Please try again.');
-        router.push('/');
+        router.push('/recipes');
         return;
       }
 
