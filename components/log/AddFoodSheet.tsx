@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   FOOD_COLUMNS,
@@ -23,6 +23,32 @@ type Recent = { food: Food; lastGrams: number };
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-bold text-slate-900 outline-none focus:border-[#004225]';
 
+
+// The on-screen keyboard shrinks the *visual* viewport but not the layout viewport, so size and place the sheet
+// from the visual one. That keeps the search box above the keyboard instead of hidden behind it.
+function subscribeViewport(callback: () => void) {
+  const vv = window.visualViewport;
+  window.addEventListener('resize', callback);
+  vv?.addEventListener('resize', callback);
+  vv?.addEventListener('scroll', callback);
+  return () => {
+    window.removeEventListener('resize', callback);
+    vv?.removeEventListener('resize', callback);
+    vv?.removeEventListener('scroll', callback);
+  };
+}
+const getViewport = () => {
+  const vv = window.visualViewport;
+  return vv ? `${Math.round(vv.height)}:${Math.round(vv.offsetTop)}` : `${window.innerHeight}:0`;
+};
+
+function useVisualViewport() {
+  const value = useSyncExternalStore(subscribeViewport, getViewport, () => '');
+  if (!value) return { height: null as number | null, offsetTop: 0 };
+  const [height, offsetTop] = value.split(':').map(Number);
+  return { height, offsetTop };
+}
+
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
 export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
@@ -37,6 +63,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mealChoice, setMealChoice] = useState<MealSlot>(meal);
+  const viewport = useVisualViewport();
 
   // Recent foods: one tap to log the same thing again, at the amount you last used.
   useEffect(() => {
@@ -127,12 +154,17 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
   const showResults = query.trim().length >= 2;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/70 backdrop-blur-sm sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[90] flex items-start justify-center bg-slate-950/70 backdrop-blur-sm" onClick={onClose}>
+      {/* Pinned to the top at a fixed height: results scroll underneath the search box instead of the sheet growing. */}
       <div
-        className="flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+        className="flex w-full max-w-md flex-col rounded-3xl bg-white shadow-2xl"
+        style={{
+          height: viewport.height ? `${Math.min(Math.max(viewport.height - 24, 320), 720)}px` : 'min(85dvh, 720px)',
+          marginTop: `calc(0.75rem + ${viewport.offsetTop}px)`,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 pb-3 pt-6">
+        <div className="flex shrink-0 items-center justify-between px-6 pb-3 pt-5">
           <h2 className="text-xl font-black text-slate-900">
             {view === 'custom' ? 'New food' : view === 'amount' ? 'How much?' : 'Add food'}
           </h2>
@@ -141,8 +173,8 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
           </button>
         </div>
 
-        <div className="overflow-y-auto px-6" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
-          <div className="mb-4 flex gap-1.5">
+        <div className="shrink-0 px-6">
+          <div className="mb-3 flex gap-1.5">
             {MEALS.map((m) => (
               <button
                 key={m.key}
@@ -165,11 +197,16 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
                 placeholder="Search foods, e.g. lentils, greek yogurt"
                 className={inputClass}
               />
-
               {notice && <p className="mt-3 text-xs font-bold text-amber-700">{notice}</p>}
+            </>
+          )}
+        </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-3" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
+          {view === 'search' && (
+            <>
               {!showResults && recents.length > 0 && (
-                <div className="mt-5">
+                <div>
                   <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Recent</p>
                   <ul className="space-y-2">
                     {recents.map(({ food, lastGrams }) => (
@@ -195,7 +232,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
               )}
 
               {showResults && (
-                <ul className="mt-4 space-y-2">
+                <ul className="space-y-2">
                   {results.map((food) => (
                     <li key={food.id}>
                       <button onClick={() => choose(food)} className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-left active:bg-slate-100">
