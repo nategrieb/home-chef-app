@@ -15,7 +15,7 @@ export const MEALS: { key: MealSlot; label: string }[] = [
 /** A food as stored in chef.foods (nutrients per 100 g). */
 export type Food = {
   id: string;
-  source: 'usda' | 'off' | 'custom';
+  source: 'usda' | 'off' | 'custom' | 'recipe';
   name: string;
   brand: string | null;
   kcal_100g: number;

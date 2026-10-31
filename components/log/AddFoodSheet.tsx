@@ -11,12 +11,15 @@ import {
   type MealSlot,
 } from '../../lib/nutrition';
 import { MAX_ENTRY_GRAMS, amountText, buildPortions, type PortionOptions } from '../../lib/portions';
+import { recipeAsFood, type RecipeNutritionRow } from '../../lib/recipe-nutrition';
 
 type Props = {
   meal: MealSlot;
   date: string;
   onClose: () => void;
   onAdded: (entry: LogEntry) => void;
+  /** Open straight on this recipe's amount screen (the Log button on a recipe page). */
+  initialRecipeId?: string;
 };
 
 type Preset = { grams: number; quantity: number | null; portionLabel: string | null };
@@ -53,13 +56,14 @@ function useVisualViewport() {
 
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
-export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
-  const [view, setView] = useState<'search' | 'amount' | 'custom'>('search');
+export default function AddFoodSheet({ meal, date, onClose, onAdded, initialRecipeId }: Props) {
+  const [view, setView] = useState<'search' | 'amount' | 'custom'>(initialRecipeId ? 'amount' : 'search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Food[]>([]);
   const [searching, setSearching] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [recents, setRecents] = useState<Recent[]>([]);
+  const [recipes, setRecipes] = useState<Food[]>([]);
   const [selected, setSelected] = useState<Food | null>(null);
   const [options, setOptions] = useState<PortionOptions | null>(null);
   const [unitIndex, setUnitIndex] = useState(0);
@@ -70,24 +74,46 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
   const [mealChoice, setMealChoice] = useState<MealSlot>(meal);
   const viewport = useVisualViewport();
 
-  // Recent foods: one tap to log the same thing again, at the amount you last used.
+  // Recipes with nutrition, and recent foods and recipes: one tap to log them again, at the amount you last used.
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // If the recipe nutrition table isn't set up yet this just comes back empty.
+      const { data: nutrition } = await supabase
+        .from('recipe_nutrition')
+        .select('recipe_id, servings, total_grams, kcal, protein_g, carbs_g, fat_g, items, recipe:recipes (title)');
+      const recipeFoods = ((nutrition ?? []) as unknown as (Record<string, unknown> & { recipe: { title: string } | null })[])
+        .filter((r) => r.recipe)
+        .map((r) =>
+          recipeAsFood(r.recipe!.title, {
+            recipe_id: r.recipe_id as string,
+            servings: Number(r.servings),
+            total_grams: Number(r.total_grams),
+            kcal: Number(r.kcal),
+            protein_g: Number(r.protein_g),
+            carbs_g: Number(r.carbs_g),
+            fat_g: Number(r.fat_g),
+            items: [],
+          } satisfies RecipeNutritionRow)
+        )
+        .sort((a, b) => a.name.localeCompare(b.name));
+      const recipeById = new Map(recipeFoods.map((f) => [f.id, f]));
+
       const { data } = await supabase
         .from('food_log')
-        .select(`grams, quantity, portion_label, created_at, food:foods (${FOOD_COLUMNS})`)
-        .not('food_id', 'is', null)
+        .select(`grams, quantity, portion_label, recipe_id, created_at, food:foods (${FOOD_COLUMNS})`)
         .order('created_at', { ascending: false })
         .limit(80);
-      if (cancelled || !data) return;
+      if (cancelled) return;
+
       const seen = new Set<string>();
       const list: Recent[] = [];
-      for (const row of data as unknown as { grams: number; quantity: number | null; portion_label: string | null; food: Food | null }[]) {
-        if (!row.food || seen.has(row.food.id)) continue;
-        seen.add(row.food.id);
+      for (const row of (data ?? []) as unknown as { grams: number; quantity: number | null; portion_label: string | null; recipe_id: string | null; food: Food | null }[]) {
+        const food = row.food ?? (row.recipe_id ? recipeById.get(row.recipe_id) : undefined);
+        if (!food || seen.has(food.id)) continue;
+        seen.add(food.id);
         list.push({
-          food: row.food,
+          food,
           last: {
             grams: Number(row.grams),
             quantity: row.quantity != null ? Number(row.quantity) : null,
@@ -96,11 +122,18 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
         });
         if (list.length >= 10) break;
       }
+      setRecipes(recipeFoods);
       setRecents(list);
+
+      const start = initialRecipeId ? recipeById.get(initialRecipeId) : undefined;
+      if (start) choose(start);
+      else if (initialRecipeId) setView('search');
     })();
     return () => {
       cancelled = true;
     };
+    // choose() only uses setters and a ref, so it is safe to leave out of the dependencies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Search as you type (debounced).
@@ -145,13 +178,17 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
     setView('amount');
 
     let loaded: PortionOptions;
-    try {
-      const res = await fetch(`/api/foods/portions?id=${encodeURIComponent(food.id)}`);
-      if (!res.ok) throw new Error('portions unavailable');
-      loaded = (await res.json()) as PortionOptions;
-    } catch {
-      // Offline or USDA hiccup: the food's own serving plus grams and ounces still work.
-      loaded = buildPortions(food);
+    if (food.source === 'recipe') {
+      loaded = buildPortions(food); // a recipe's units are its serving, grams and ounces
+    } else {
+      try {
+        const res = await fetch(`/api/foods/portions?id=${encodeURIComponent(food.id)}`);
+        if (!res.ok) throw new Error('portions unavailable');
+        loaded = (await res.json()) as PortionOptions;
+      } catch {
+        // Offline or USDA hiccup: the food's own serving plus grams and ounces still work.
+        loaded = buildPortions(food);
+      }
     }
     if (chosenFoodId.current !== food.id) return; // picked something else meanwhile
 
@@ -202,7 +239,8 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
       .insert({
         logged_on: date,
         meal: mealChoice,
-        food_id: food.id,
+        food_id: food.source === 'recipe' ? null : food.id,
+        recipe_id: food.source === 'recipe' ? food.id : null,
         name: foodLabel(food),
         grams: amount.grams,
         quantity: amount.quantity,
@@ -229,6 +267,27 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
   const toLog = (): Preset | null =>
     grams && unit && quantity ? { grams, quantity: unit.label === 'g' ? null : quantity, portionLabel: unit.label === 'g' ? null : unit.label } : null;
   const showResults = query.trim().length >= 2;
+  const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const matchingRecipes = recipes.filter((r) => queryTerms.every((t) => r.name.toLowerCase().includes(t)));
+  const recipeServing = (food: Food): Preset => ({ grams: food.serving_g ?? 0, quantity: 1, portionLabel: 'serving' });
+  const recipeRow = (food: Food) => (
+    <li key={`recipe-${food.id}`} className="flex items-center gap-2">
+      <button onClick={() => choose(food)} className="min-w-0 flex-1 rounded-2xl bg-emerald-50 px-4 py-3 text-left active:bg-emerald-100">
+        <p className="truncate text-sm font-bold text-slate-900">{food.name}</p>
+        <p className="text-xs font-bold text-emerald-800">
+          Recipe · 1 serving · {Math.round(macrosForGrams(food, food.serving_g ?? 0).kcal)} kcal · {Math.round(macrosForGrams(food, food.serving_g ?? 0).protein_g)} P
+        </p>
+      </button>
+      <button
+        onClick={() => addEntry(food, recipeServing(food))}
+        disabled={saving}
+        aria-label={`Log 1 serving of ${food.name}`}
+        className="h-12 w-12 shrink-0 rounded-2xl bg-[#004225] text-xl font-black text-white disabled:opacity-50 active:scale-95"
+      >
+        +
+      </button>
+    </li>
+  );
 
   return (
     <div className="fixed inset-0 z-[90] flex items-start justify-center bg-slate-950/70 backdrop-blur-sm" onClick={onClose}>
@@ -282,11 +341,18 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-3" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
           {view === 'search' && (
             <>
-              {!showResults && recents.length > 0 && (
+              {!showResults && recipes.length > 0 && (
+                <div className="mb-5">
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Your recipes</p>
+                  <ul className="space-y-2">{recipes.map(recipeRow)}</ul>
+                </div>
+              )}
+
+              {!showResults && recents.some((r) => r.food.source !== 'recipe') && (
                 <div>
                   <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Recent</p>
                   <ul className="space-y-2">
-                    {recents.map(({ food, last }) => (
+                    {recents.filter((r) => r.food.source !== 'recipe').map(({ food, last }) => (
                       <li key={food.id} className="flex items-center gap-2">
                         <button onClick={() => choose(food, last)} className="min-w-0 flex-1 rounded-2xl bg-slate-50 px-4 py-3 text-left active:bg-slate-100">
                           <p className="truncate text-sm font-bold text-slate-900">{foodLabel(food)}</p>
@@ -310,6 +376,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
 
               {showResults && (
                 <ul className="space-y-2">
+                  {matchingRecipes.map(recipeRow)}
                   {results.map((food) => (
                     <li key={food.id}>
                       <button onClick={() => choose(food)} className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-left active:bg-slate-100">
@@ -321,8 +388,8 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
                       </button>
                     </li>
                   ))}
-                  {searching && results.length === 0 && <li className="py-4 text-center text-sm font-bold text-slate-400">Searching…</li>}
-                  {!searching && results.length === 0 && <li className="py-4 text-center text-sm font-bold text-slate-400">No matches yet.</li>}
+                  {searching && results.length === 0 && matchingRecipes.length === 0 && <li className="py-4 text-center text-sm font-bold text-slate-400">Searching…</li>}
+                  {!searching && results.length === 0 && matchingRecipes.length === 0 && <li className="py-4 text-center text-sm font-bold text-slate-400">No matches yet.</li>}
                 </ul>
               )}
 
@@ -335,10 +402,15 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
             </>
           )}
 
+          {view === 'amount' && !selected && <p className="mt-8 text-center text-sm font-bold text-slate-400">Loading…</p>}
           {view === 'amount' && selected && (
             <>
               <p className="text-base font-black text-slate-900">{foodLabel(selected)}</p>
-              <p className="mt-1 text-xs font-bold text-slate-400">{Math.round(selected.kcal_100g)} kcal per 100 g</p>
+              <p className="mt-1 text-xs font-bold text-slate-400">
+                {selected.source === 'recipe'
+                  ? `Recipe · ${Math.round(macrosForGrams(selected, selected.serving_g ?? 0).kcal)} kcal per serving`
+                  : `${Math.round(selected.kcal_100g)} kcal per 100 g`}
+              </p>
 
               {!options || !unit ? (
                 <p className="mt-8 text-center text-sm font-bold text-slate-400">Loading amounts…</p>
