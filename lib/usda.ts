@@ -1,6 +1,6 @@
 /** USDA FoodData Central: search and mapping into chef.foods rows (all nutrients per 100 g). */
 
-import { USDA_NUTRIENT } from './nutrition';
+import { USDA_NUTRIENT, foodSearchScore } from './nutrition';
 
 const USDA_SEARCH = 'https://api.nal.usda.gov/fdc/v1/foods/search';
 
@@ -41,16 +41,31 @@ export function toFoodRow(f: UsdaFood) {
     }
   }
 
+  const rawKcal = pick(nutrients, USDA_NUTRIENT.kcal);
+  const rawProtein = pick(nutrients, USDA_NUTRIENT.protein);
+  const rawCarbs = pick(nutrients, USDA_NUTRIENT.carbs);
+  const rawFat = pick(nutrients, USDA_NUTRIENT.fat);
+  // Some entries (a few foundation oils) have no energy or macro data at all; they'd log as 0 kcal, so skip them.
+  if (rawKcal == null && rawProtein == null && rawCarbs == null && rawFat == null) return null;
+
+  // "Carbs by difference" can come out slightly negative for meats; a negative amount makes no sense.
+  const protein = Math.max(0, rawProtein ?? 0);
+  const carbs = Math.max(0, rawCarbs ?? 0);
+  const fat = Math.max(0, rawFat ?? 0);
+  // Some foundation foods (oils, for one) come without an energy value. Estimate it with the standard 4/4/9 factors
+  // rather than showing 0 kcal.
+  const kcal = rawKcal ?? Math.round((protein * 4 + carbs * 4 + fat * 9) * 10) / 10;
+
   return {
     source: 'usda' as const,
     source_id: String(f.fdcId),
     barcode: f.gtinUpc ?? null,
     name: branded ? titleCase(f.description) : f.description,
     brand: branded ? (f.brandName ?? f.brandOwner ?? null) : null,
-    kcal_100g: pick(nutrients, USDA_NUTRIENT.kcal) ?? 0,
-    protein_100g: pick(nutrients, USDA_NUTRIENT.protein) ?? 0,
-    carbs_100g: pick(nutrients, USDA_NUTRIENT.carbs) ?? 0,
-    fat_100g: pick(nutrients, USDA_NUTRIENT.fat) ?? 0,
+    kcal_100g: kcal,
+    protein_100g: protein,
+    carbs_100g: carbs,
+    fat_100g: fat,
     fiber_100g: pick(nutrients, USDA_NUTRIENT.fiber),
     sugar_100g: pick(nutrients, USDA_NUTRIENT.sugar),
     sodium_mg_100g: pick(nutrients, USDA_NUTRIENT.sodium),
@@ -74,16 +89,17 @@ export async function usdaSearch(query: string, dataType: string, pageSize: numb
 
 
 /**
- * USDA's own ordering for plain foods can be odd ("chicken breast" -> lunchmeat first). Keep results that
- * contain every search word, put names that start with the first word on top, and prefer shorter (plainer) names.
+ * USDA's own ordering for plain foods can be odd ("chicken breast" -> lunchmeat first). Keep results that contain
+ * every search word and order them with the same relevance score the search route uses.
  */
-export function rankByQuery(foods: UsdaFood[], terms: string[]): UsdaFood[] {
+export function rankByQuery(foods: UsdaFood[], query: string): UsdaFood[] {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
   const lower = (f: UsdaFood) => f.description.toLowerCase();
   const matching = foods.filter((f) => terms.every((t) => lower(f).includes(t)));
   const pool = matching.length > 0 ? matching : foods;
   return [...pool].sort(
     (a, b) =>
-      Number(lower(b).startsWith(terms[0] ?? '')) - Number(lower(a).startsWith(terms[0] ?? '')) ||
+      foodSearchScore(b.description, null, query) - foodSearchScore(a.description, null, query) ||
       a.description.length - b.description.length
   );
 }

@@ -79,7 +79,9 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
           body.error ??
             (body.usda === 'rate_limited'
               ? 'Food database is busy. Showing saved foods only; try again in a few minutes.'
-              : body.usda === 'unavailable'
+              : body.usda === 'cache_failed'
+                ? 'Couldn’t load new foods just now. Try the search again.'
+                : body.usda === 'unavailable'
                 ? 'Food database is unreachable. Showing saved foods only.'
                 : null)
         );

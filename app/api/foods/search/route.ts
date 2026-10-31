@@ -29,11 +29,11 @@ export async function GET(request: Request) {
   const foods: Food[] = [...((localFoods ?? []) as Food[])];
 
   // 2) USDA for anything not cached yet. Generic foods first, then branded products.
-  let usda: 'ok' | 'rate_limited' | 'unavailable' | 'skipped' = 'skipped';
+  let usda: 'ok' | 'rate_limited' | 'unavailable' | 'cache_failed' | 'skipped' = 'skipped';
   if (q.length >= 3) {
     const apiKey = process.env.USDA_API_KEY ?? 'DEMO_KEY';
     const [generic, branded] = await Promise.all([
-      usdaSearch(q, 'Foundation,SR Legacy', 30, apiKey),
+      usdaSearch(q, 'Foundation,SR Legacy', 100, apiKey),
       usdaSearch(q, 'Branded', 8, apiKey),
     ]);
 
@@ -42,13 +42,23 @@ export async function GET(request: Request) {
     else {
       usda = 'ok';
       const rows = [
-        ...rankByQuery(Array.isArray(generic) ? generic : [], terms).slice(0, 8),
+        ...rankByQuery(Array.isArray(generic) ? generic : [], q).slice(0, 8),
         ...(Array.isArray(branded) ? branded : []),
-      ].map(toFoodRow);
+      ]
+        .map(toFoodRow)
+        .filter((row): row is NonNullable<ReturnType<typeof toFoodRow>> => row !== null);
 
       if (rows.length > 0) {
         // Cache what we found; then read it back to get row ids (existing rows are left as they are).
-        await chef.from('foods').upsert(rows, { onConflict: 'source,source_id', ignoreDuplicates: true });
+        let cacheError = (await chef.from('foods').upsert(rows, { onConflict: 'source,source_id', ignoreDuplicates: true })).error;
+        if (cacheError) {
+          // One retry: a dropped connection to the database shouldn't silently hide the USDA results.
+          cacheError = (await chef.from('foods').upsert(rows, { onConflict: 'source,source_id', ignoreDuplicates: true })).error;
+        }
+        if (cacheError) {
+          console.error('caching USDA foods failed:', cacheError);
+          usda = 'cache_failed';
+        }
         const { data: cached } = await chef
           .from('foods')
           .select(FOOD_COLUMNS + ', source_id')

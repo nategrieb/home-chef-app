@@ -122,11 +122,14 @@ export function foodSearchScore(name: string, brand: string | null, query: strin
   const head = lower.split(',').slice(0, 2).join(' ');
 
   let score = 0;
-  if (lower.replace(/,/g, '').includes(q)) score += 4;
+  const flat = lower.replace(/,/g, '');
+  if (head.replace(/,/g, '').includes(q)) score += 4;
+  else if (flat.includes(q)) score += 1;
   if (terms.every((t) => head.includes(t))) score += 3;
   if (/\b(raw|cooked)\b/.test(lower)) score += 3;
   const processed = lower.match(PROCESSED);
   if (processed && !q.includes(processed[1])) score -= 4;
-  if (brand) score -= 2;
+  if (/\bwhole\b/.test(lower)) score += 1;
+  if (brand) score -= 5;
   return score;
 }
