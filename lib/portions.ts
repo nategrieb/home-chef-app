@@ -145,3 +145,6 @@ export function amountText(entry: { grams: number; quantity: number | null; port
   const g = `${trim(Number(entry.grams))} g`;
   return entry.portion_label && entry.quantity ? `${trim(Number(entry.quantity))} × ${entry.portion_label} · ${g}` : g;
 }
+
+/** Largest single entry accepted (10 kg). Anything above it is almost certainly a typo, e.g. 120 typed next to 150. */
+export const MAX_ENTRY_GRAMS = 10000;

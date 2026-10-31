@@ -10,7 +10,7 @@ import {
   type LogEntry,
   type MealSlot,
 } from '../../lib/nutrition';
-import { amountText, buildPortions, type PortionOptions } from '../../lib/portions';
+import { MAX_ENTRY_GRAMS, amountText, buildPortions, type PortionOptions } from '../../lib/portions';
 
 type Props = {
   meal: MealSlot;
@@ -224,6 +224,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
   const quantity = parseNumber(qtyText);
   const grams = unit && quantity ? Math.round(quantity * unit.grams * 10) / 10 : null;
   const preview = selected && grams ? macrosForGrams(selected, grams) : null;
+  const tooMuch = grams != null && grams > MAX_ENTRY_GRAMS;
   // Grams are stored as typed; every other unit remembers its quantity and name so the log can say "2 × large egg".
   const toLog = (): Preset | null =>
     grams && unit && quantity ? { grams, quantity: unit.label === 'g' ? null : quantity, portionLabel: unit.label === 'g' ? null : unit.label } : null;
@@ -373,6 +374,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
                     {unit.label === 'g' ? '' : `× ${unit.label} = `}
                     {grams ? `${Math.round(grams * 10) / 10} g` : ''}
                   </p>
+                  {tooMuch && <p className="mt-1 text-center text-xs font-bold text-red-600">That’s over {MAX_ENTRY_GRAMS / 1000} kg. Check the number.</p>}
 
                   <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Measured in</p>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -418,7 +420,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
                     const amount = toLog();
                     if (amount) addEntry(selected, amount);
                   }}
-                  disabled={!grams || saving}
+                  disabled={!grams || saving || tooMuch}
                   className="flex-1 rounded-2xl bg-[#004225] py-4 text-xs font-black uppercase tracking-widest text-white disabled:opacity-40 active:scale-95"
                 >
                   {saving ? 'Adding…' : 'Add'}
