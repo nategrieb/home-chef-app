@@ -23,6 +23,8 @@ export const metadata: Metadata = {
     icon: '/triangle.svg',
     apple: '/apple-touch-icon.png',
   },
+  // Next only emits the unprefixed tag; older iOS versions still look for the Apple one.
+  other: { 'apple-mobile-web-app-capable': 'yes' },
 };
 
 export default function RootLayout({

@@ -38,7 +38,7 @@ export default function MobileNav() {
 
   return (
     <>
-      <footer className="sm:hidden fixed bottom-4 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-2 rounded-2xl shadow-xl z-50 whitespace-nowrap">
+      <footer className="sm:hidden fixed bottom-[max(1rem,calc(env(safe-area-inset-bottom)+0.5rem))] left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-2 rounded-2xl shadow-xl z-50 whitespace-nowrap">
         <div className="flex gap-1">
           {navItems.map((item) => {
             const isActive = pathname === item.path;
