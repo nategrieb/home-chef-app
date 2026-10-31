@@ -1,6 +1,7 @@
 -- ============================================================
 -- THE MENU: calorie tracking (phase 1)
--- Run in the Supabase SQL Editor. Safe to re-run.
+-- Run once in the Supabase SQL Editor (it contains no DROP statements, so Supabase won't show a
+-- "destructive query" warning). Tables use IF NOT EXISTS; policies don't, so re-running errors on them.
 -- Also add USDA_API_KEY (free, from fdc.nal.usda.gov) to .env.local and the Vercel project.
 --
 -- foods          shared catalogue + cache (USDA, later Open Food Facts) and each person's own custom foods.
@@ -79,12 +80,10 @@ ALTER TABLE food_log        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE nutrition_goals ENABLE ROW LEVEL SECURITY;
 
 -- Foods: everyone with app access reads the shared catalogue plus their own custom foods.
-DROP POLICY IF EXISTS foods_select ON foods;
 CREATE POLICY foods_select ON foods FOR SELECT TO authenticated
   USING (platform.has_app_access('chef') AND (owner_id IS NULL OR owner_id = auth.uid()));
 
 -- Anyone with access may add to the shared catalogue (looked-up foods) or create their own custom food.
-DROP POLICY IF EXISTS foods_insert ON foods;
 CREATE POLICY foods_insert ON foods FOR INSERT TO authenticated
   WITH CHECK (
     platform.has_app_access('chef')
@@ -95,22 +94,18 @@ CREATE POLICY foods_insert ON foods FOR INSERT TO authenticated
   );
 
 -- Only your own custom foods can be edited or deleted. Catalogue rows are never changed by users.
-DROP POLICY IF EXISTS foods_update_own ON foods;
 CREATE POLICY foods_update_own ON foods FOR UPDATE TO authenticated
   USING (platform.has_app_access('chef') AND source = 'custom' AND owner_id = auth.uid())
   WITH CHECK (platform.has_app_access('chef') AND source = 'custom' AND owner_id = auth.uid());
 
-DROP POLICY IF EXISTS foods_delete_own ON foods;
 CREATE POLICY foods_delete_own ON foods FOR DELETE TO authenticated
   USING (platform.has_app_access('chef') AND source = 'custom' AND owner_id = auth.uid());
 
 -- Food log and goals are private to each person.
-DROP POLICY IF EXISTS food_log_own ON food_log;
 CREATE POLICY food_log_own ON food_log FOR ALL TO authenticated
   USING (platform.has_app_access('chef') AND user_id = auth.uid())
   WITH CHECK (platform.has_app_access('chef') AND user_id = auth.uid());
 
-DROP POLICY IF EXISTS nutrition_goals_own ON nutrition_goals;
 CREATE POLICY nutrition_goals_own ON nutrition_goals FOR ALL TO authenticated
   USING (platform.has_app_access('chef') AND user_id = auth.uid())
   WITH CHECK (platform.has_app_access('chef') AND user_id = auth.uid());

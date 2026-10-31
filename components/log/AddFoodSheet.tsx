@@ -234,6 +234,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
                   inputMode="decimal"
                   value={gramsText}
                   onChange={(e) => setGramsText(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className={`${inputClass} text-2xl`}
                 />
                 <span className="text-lg font-black text-slate-400">g</span>

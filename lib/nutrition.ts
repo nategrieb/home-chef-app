@@ -108,3 +108,25 @@ export const USDA_NUTRIENT = {
   sugar: ['269', '269.3'],
   sodium: ['307'],
 } as const;
+
+const PROCESSED = /\b(flour|puffed|powder|dried|mix|infant|baby|pre-?gelatinized|instant|breaded|roll|nuggets|tenders|patties|canned|sliced|lunchmeat|luncheon|deli|flavor)\b/;
+
+/**
+ * Relevance for a food-name search, higher is better. Favors the plain whole food ("Rice, white, long-grain, raw")
+ * over products made from it ("White rice, flour"), and generic foods over branded ones.
+ */
+export function foodSearchScore(name: string, brand: string | null, query: string): number {
+  const lower = name.toLowerCase();
+  const q = query.toLowerCase().trim();
+  const terms = q.split(/\s+/).filter(Boolean);
+  const head = lower.split(',').slice(0, 2).join(' ');
+
+  let score = 0;
+  if (lower.replace(/,/g, '').includes(q)) score += 4;
+  if (terms.every((t) => head.includes(t))) score += 3;
+  if (/\b(raw|cooked)\b/.test(lower)) score += 3;
+  const processed = lower.match(PROCESSED);
+  if (processed && !q.includes(processed[1])) score -= 4;
+  if (brand) score -= 2;
+  return score;
+}

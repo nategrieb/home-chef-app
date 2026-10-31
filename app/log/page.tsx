@@ -276,6 +276,7 @@ function EditEntrySheet({
             inputMode="decimal"
             value={gramsText}
             onChange={(e) => setGramsText(e.target.value)}
+            onFocus={(e) => e.target.select()}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-2xl font-bold text-slate-900 outline-none focus:border-[#004225]"
           />
           <span className="text-lg font-black text-slate-400">g</span>

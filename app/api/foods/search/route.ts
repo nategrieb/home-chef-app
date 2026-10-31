@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '../../../../lib/supabase-server';
-import { FOOD_COLUMNS, type Food } from '../../../../lib/nutrition';
+import { FOOD_COLUMNS, foodSearchScore, type Food } from '../../../../lib/nutrition';
 import { rankByQuery, toFoodRow, usdaSearch } from '../../../../lib/usda';
 
 export async function GET(request: Request) {
@@ -22,13 +22,11 @@ export async function GET(request: Request) {
   for (const term of terms) local = local.ilike('name', `%${term}%`);
   const { data: localFoods, error: localError } = await local;
   if (localError) {
-    return NextResponse.json({ foods: [], error: 'Food tables are not set up yet. Run add-calorie-tracking.sql.' }, { status: 500 });
+    console.error('foods search failed:', localError);
+    return NextResponse.json({ foods: [], error: `Food search failed: ${localError.message}` }, { status: 500 });
   }
 
-  // Custom foods first, then by shorter (plainer) name.
-  const foods: Food[] = [...((localFoods ?? []) as Food[])].sort(
-    (a, b) => Number(b.source === 'custom') - Number(a.source === 'custom') || a.name.length - b.name.length
-  );
+  const foods: Food[] = [...((localFoods ?? []) as Food[])];
 
   // 2) USDA for anything not cached yet. Generic foods first, then branded products.
   let usda: 'ok' | 'rate_limited' | 'unavailable' | 'skipped' = 'skipped';
@@ -66,6 +64,14 @@ export async function GET(request: Request) {
       }
     }
   }
+
+  // Your own foods first; then best match (plain whole foods before products), then shorter names.
+  foods.sort(
+    (a, b) =>
+      Number(b.source === 'custom') - Number(a.source === 'custom') ||
+      foodSearchScore(b.name, b.brand, q) - foodSearchScore(a.name, a.brand, q) ||
+      a.name.length - b.name.length
+  );
 
   return NextResponse.json({ foods: foods.slice(0, 20), usda });
 }
