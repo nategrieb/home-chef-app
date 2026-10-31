@@ -42,6 +42,9 @@ export type LogEntry = Macros & {
   recipe_id: string | null;
   name: string;
   grams: number;
+  /** The unit it was logged in, e.g. 2 x "large egg"; null when logged by weight. */
+  quantity: number | null;
+  portion_label: string | null;
   created_at: string;
 };
 

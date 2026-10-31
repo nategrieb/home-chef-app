@@ -1,6 +1,7 @@
 /** USDA FoodData Central: search and mapping into chef.foods rows (all nutrients per 100 g). */
 
 import { USDA_NUTRIENT, foodSearchScore } from './nutrition';
+import type { UsdaPortion } from './portions';
 
 const USDA_SEARCH = 'https://api.nal.usda.gov/fdc/v1/foods/search';
 
@@ -102,4 +103,18 @@ export function rankByQuery(foods: UsdaFood[], query: string): UsdaFood[] {
       foodSearchScore(b.description, null, query) - foodSearchScore(a.description, null, query) ||
       a.description.length - b.description.length
   );
+}
+
+/** Household measures for one USDA food (1 large = 50 g, 1 tbsp = 13.5 g, ...). Cached for a month; they never change. */
+export async function usdaFoodPortions(fdcId: string, apiKey: string): Promise<UsdaPortion[]> {
+  try {
+    const res = await fetch(`https://api.nal.usda.gov/fdc/v1/food/${encodeURIComponent(fdcId)}?api_key=${encodeURIComponent(apiKey)}`, {
+      next: { revalidate: 60 * 60 * 24 * 30 },
+    });
+    if (!res.ok) return [];
+    const body = (await res.json()) as { foodPortions?: UsdaPortion[] };
+    return body.foodPortions ?? [];
+  } catch {
+    return [];
+  }
 }

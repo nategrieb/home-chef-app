@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   FOOD_COLUMNS,
@@ -10,6 +10,7 @@ import {
   type LogEntry,
   type MealSlot,
 } from '../../lib/nutrition';
+import { amountText, buildPortions, type PortionOptions } from '../../lib/portions';
 
 type Props = {
   meal: MealSlot;
@@ -18,7 +19,8 @@ type Props = {
   onAdded: (entry: LogEntry) => void;
 };
 
-type Recent = { food: Food; lastGrams: number };
+type Preset = { grams: number; quantity: number | null; portionLabel: string | null };
+type Recent = { food: Food; last: Preset };
 
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base font-bold text-slate-900 outline-none focus:border-[#004225]';
@@ -59,7 +61,10 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   const [recents, setRecents] = useState<Recent[]>([]);
   const [selected, setSelected] = useState<Food | null>(null);
-  const [gramsText, setGramsText] = useState('');
+  const [options, setOptions] = useState<PortionOptions | null>(null);
+  const [unitIndex, setUnitIndex] = useState(0);
+  const [qtyText, setQtyText] = useState('1');
+  const chosenFoodId = useRef<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mealChoice, setMealChoice] = useState<MealSlot>(meal);
@@ -71,17 +76,24 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
     (async () => {
       const { data } = await supabase
         .from('food_log')
-        .select(`grams, created_at, food:foods (${FOOD_COLUMNS})`)
+        .select(`grams, quantity, portion_label, created_at, food:foods (${FOOD_COLUMNS})`)
         .not('food_id', 'is', null)
         .order('created_at', { ascending: false })
         .limit(80);
       if (cancelled || !data) return;
       const seen = new Set<string>();
       const list: Recent[] = [];
-      for (const row of data as unknown as { grams: number; food: Food | null }[]) {
+      for (const row of data as unknown as { grams: number; quantity: number | null; portion_label: string | null; food: Food | null }[]) {
         if (!row.food || seen.has(row.food.id)) continue;
         seen.add(row.food.id);
-        list.push({ food: row.food, lastGrams: Number(row.grams) });
+        list.push({
+          food: row.food,
+          last: {
+            grams: Number(row.grams),
+            quantity: row.quantity != null ? Number(row.quantity) : null,
+            portionLabel: row.portion_label,
+          },
+        });
         if (list.length >= 10) break;
       }
       setRecents(list);
@@ -124,20 +136,79 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
     };
   }, [query]);
 
-  function choose(food: Food, grams?: number) {
+  /** Open the amount screen for a food, loading the units it can be measured in (eggs, slices, tbsp, grams...). */
+  async function choose(food: Food, preset?: Preset) {
+    chosenFoodId.current = food.id;
     setSelected(food);
-    setGramsText(grams ? String(grams) : food.serving_g ? String(food.serving_g) : '100');
+    setOptions(null);
     setError(null);
     setView('amount');
+
+    let loaded: PortionOptions;
+    try {
+      const res = await fetch(`/api/foods/portions?id=${encodeURIComponent(food.id)}`);
+      if (!res.ok) throw new Error('portions unavailable');
+      loaded = (await res.json()) as PortionOptions;
+    } catch {
+      // Offline or USDA hiccup: the food's own serving plus grams and ounces still work.
+      loaded = buildPortions(food);
+    }
+    if (chosenFoodId.current !== food.id) return; // picked something else meanwhile
+
+    let index = loaded.defaultIndex;
+    let quantity = loaded.defaultQuantity;
+    if (preset) {
+      const match = preset.portionLabel ? loaded.portions.findIndex((p) => p.label === preset.portionLabel) : -1;
+      if (match >= 0 && preset.quantity) {
+        index = match;
+        quantity = preset.quantity;
+      } else {
+        index = loaded.portions.findIndex((p) => p.label === 'g');
+        quantity = preset.grams;
+      }
+    }
+    setOptions(loaded);
+    setUnitIndex(index);
+    setQtyText(String(Math.round(quantity * 100) / 100));
   }
 
-  async function addEntry(food: Food, grams: number) {
+  /** Switch unit. Between counted units (large egg -> small egg) the number stays; to or from grams the amount is converted. */
+  function pickUnit(next: number) {
+    if (!options) return;
+    const from = options.portions[unitIndex];
+    const to = options.portions[next];
+    const qty = parseNumber(qtyText);
+    if (qty != null && (from.kind === 'weight') !== (to.kind === 'weight')) {
+      const converted = (qty * from.grams) / to.grams;
+      setQtyText(String(to.kind === 'weight' ? Math.round(converted * 10) / 10 : Math.round(converted * 4) / 4 || 1));
+    }
+    setUnitIndex(next);
+  }
+
+  function nudge(direction: 1 | -1) {
+    const portion = options?.portions[unitIndex];
+    if (!portion) return;
+    const current = parseNumber(qtyText) ?? 0;
+    const next = Math.max(portion.step, Math.round((current + direction * portion.step) * 100) / 100);
+    setQtyText(String(next));
+  }
+
+  async function addEntry(food: Food, amount: Preset) {
     setSaving(true);
     setError(null);
-    const macros = macrosForGrams(food, grams);
+    const macros = macrosForGrams(food, amount.grams);
     const { data, error: insertError } = await supabase
       .from('food_log')
-      .insert({ logged_on: date, meal: mealChoice, food_id: food.id, name: foodLabel(food), grams, ...macros })
+      .insert({
+        logged_on: date,
+        meal: mealChoice,
+        food_id: food.id,
+        name: foodLabel(food),
+        grams: amount.grams,
+        quantity: amount.quantity,
+        portion_label: amount.portionLabel,
+        ...macros,
+      })
       .select('*')
       .single();
     setSaving(false);
@@ -149,8 +220,13 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
     onClose();
   }
 
-  const grams = parseNumber(gramsText);
+  const unit = options?.portions[unitIndex] ?? null;
+  const quantity = parseNumber(qtyText);
+  const grams = unit && quantity ? Math.round(quantity * unit.grams * 10) / 10 : null;
   const preview = selected && grams ? macrosForGrams(selected, grams) : null;
+  // Grams are stored as typed; every other unit remembers its quantity and name so the log can say "2 × large egg".
+  const toLog = (): Preset | null =>
+    grams && unit && quantity ? { grams, quantity: unit.label === 'g' ? null : quantity, portionLabel: unit.label === 'g' ? null : unit.label } : null;
   const showResults = query.trim().length >= 2;
 
   return (
@@ -209,18 +285,18 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
                 <div>
                   <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Recent</p>
                   <ul className="space-y-2">
-                    {recents.map(({ food, lastGrams }) => (
+                    {recents.map(({ food, last }) => (
                       <li key={food.id} className="flex items-center gap-2">
-                        <button onClick={() => choose(food, lastGrams)} className="min-w-0 flex-1 rounded-2xl bg-slate-50 px-4 py-3 text-left active:bg-slate-100">
+                        <button onClick={() => choose(food, last)} className="min-w-0 flex-1 rounded-2xl bg-slate-50 px-4 py-3 text-left active:bg-slate-100">
                           <p className="truncate text-sm font-bold text-slate-900">{foodLabel(food)}</p>
                           <p className="text-xs font-bold text-slate-400">
-                            {lastGrams} g · {Math.round(macrosForGrams(food, lastGrams).kcal)} kcal
+                            {amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} · {Math.round(macrosForGrams(food, last.grams).kcal)} kcal
                           </p>
                         </button>
                         <button
-                          onClick={() => addEntry(food, lastGrams)}
+                          onClick={() => addEntry(food, last)}
                           disabled={saving}
-                          aria-label={`Add ${lastGrams} g of ${food.name} again`}
+                          aria-label={`Add ${amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} of ${food.name} again`}
                           className="h-12 w-12 shrink-0 rounded-2xl bg-[#004225] text-xl font-black text-white disabled:opacity-50 active:scale-95"
                         >
                           +
@@ -261,50 +337,75 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
           {view === 'amount' && selected && (
             <>
               <p className="text-base font-black text-slate-900">{foodLabel(selected)}</p>
-              <p className="mt-1 text-xs font-bold text-slate-400">
-                {Math.round(selected.kcal_100g)} kcal per 100 g
-                {selected.serving_label ? ` · serving: ${selected.serving_label}` : ''}
-              </p>
+              <p className="mt-1 text-xs font-bold text-slate-400">{Math.round(selected.kcal_100g)} kcal per 100 g</p>
 
-              <label className="mt-5 block text-[10px] font-black uppercase tracking-widest text-slate-400">Amount in grams</label>
-              <div className="mt-2 flex items-center gap-3">
-                <input
-                  autoFocus
-                  inputMode="decimal"
-                  value={gramsText}
-                  onChange={(e) => setGramsText(e.target.value)}
-                  onFocus={(e) => e.target.select()}
-                  className={`${inputClass} text-2xl`}
-                />
-                <span className="text-lg font-black text-slate-400">g</span>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {[50, 100, 150, 200].map((g) => (
-                  <button key={g} onClick={() => setGramsText(String(g))} className="rounded-full bg-slate-100 px-4 py-2 text-xs font-black text-slate-600 active:bg-slate-200">
-                    {g} g
-                  </button>
-                ))}
-                {selected.serving_g && (
-                  <button onClick={() => setGramsText(String(selected.serving_g))} className="rounded-full bg-emerald-100 px-4 py-2 text-xs font-black text-emerald-800 active:bg-emerald-200">
-                    1 serving · {selected.serving_g} g
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-5 grid grid-cols-4 gap-2 rounded-2xl bg-slate-50 p-4 text-center">
-                {[
-                  ['kcal', preview?.kcal],
-                  ['protein', preview?.protein_g],
-                  ['carbs', preview?.carbs_g],
-                  ['fat', preview?.fat_g],
-                ].map(([label, value]) => (
-                  <div key={label as string}>
-                    <p className="text-lg font-black text-slate-900">{value != null ? Math.round(value as number) : '—'}</p>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label as string}</p>
+              {!options || !unit ? (
+                <p className="mt-8 text-center text-sm font-bold text-slate-400">Loading amounts…</p>
+              ) : (
+                <>
+                  <label className="mt-5 block text-[10px] font-black uppercase tracking-widest text-slate-400">How many?</label>
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      onClick={() => nudge(-1)}
+                      aria-label="Less"
+                      className="h-14 w-14 shrink-0 rounded-2xl bg-slate-100 text-2xl font-black text-slate-600 active:bg-slate-200"
+                    >
+                      −
+                    </button>
+                    <input
+                      autoFocus
+                      inputMode="decimal"
+                      value={qtyText}
+                      onChange={(e) => setQtyText(e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                      aria-label={`Amount in ${unit.label}`}
+                      className={`${inputClass} min-w-0 text-center text-2xl`}
+                    />
+                    <button
+                      onClick={() => nudge(1)}
+                      aria-label="More"
+                      className="h-14 w-14 shrink-0 rounded-2xl bg-slate-100 text-2xl font-black text-slate-600 active:bg-slate-200"
+                    >
+                      +
+                    </button>
                   </div>
-                ))}
-              </div>
+                  <p className="mt-2 text-center text-sm font-black text-slate-500">
+                    {unit.label === 'g' ? '' : `× ${unit.label} = `}
+                    {grams ? `${Math.round(grams * 10) / 10} g` : ''}
+                  </p>
+
+                  <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Measured in</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {options.portions.map((p, i) => (
+                      <button
+                        key={`${p.label}-${i}`}
+                        onClick={() => pickUnit(i)}
+                        aria-pressed={i === unitIndex}
+                        className={`rounded-full px-4 py-2 text-xs font-black ${
+                          i === unitIndex ? 'bg-[#004225] text-white' : 'bg-slate-100 text-slate-600 active:bg-slate-200'
+                        }`}
+                      >
+                        {p.label}
+                        {p.kind !== 'weight' && <span className="opacity-60"> · {Math.round(p.grams * 10) / 10} g</span>}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-4 gap-2 rounded-2xl bg-slate-50 p-4 text-center">
+                    {[
+                      ['kcal', preview?.kcal],
+                      ['protein', preview?.protein_g],
+                      ['carbs', preview?.carbs_g],
+                      ['fat', preview?.fat_g],
+                    ].map(([label, value]) => (
+                      <div key={label as string}>
+                        <p className="text-lg font-black text-slate-900">{value != null ? Math.round(value as number) : '—'}</p>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label as string}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
               {error && <p className="mt-3 text-sm font-bold text-red-600">{error}</p>}
 
@@ -313,7 +414,10 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
                   Back
                 </button>
                 <button
-                  onClick={() => grams && addEntry(selected, grams)}
+                  onClick={() => {
+                    const amount = toLog();
+                    if (amount) addEntry(selected, amount);
+                  }}
                   disabled={!grams || saving}
                   className="flex-1 rounded-2xl bg-[#004225] py-4 text-xs font-black uppercase tracking-widest text-white disabled:opacity-40 active:scale-95"
                 >
@@ -339,7 +443,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded }: Props) {
 function CustomFoodForm({ initialName, onCancel, onCreated }: { initialName: string; onCancel: () => void; onCreated: (food: Food) => void }) {
   const [name, setName] = useState(initialName);
   const [brand, setBrand] = useState('');
-  const [v, setV] = useState({ kcal: '', protein: '', carbs: '', fat: '', fiber: '', sugar: '', sodium: '', serving: '' });
+  const [v, setV] = useState({ kcal: '', protein: '', carbs: '', fat: '', fiber: '', sugar: '', sodium: '', serving: '', servingName: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -375,7 +479,8 @@ function CustomFoodForm({ initialName, onCancel, onCreated }: { initialName: str
         sugar_100g: parseNumber(v.sugar),
         sodium_mg_100g: parseNumber(v.sodium),
         serving_g: serving,
-        serving_label: serving ? `${serving} g` : null,
+        // "1 bar", "1 slice": the unit name is what the amount screen offers next to grams.
+        serving_label: serving ? (v.servingName.trim() ? `1 ${v.servingName.trim().toLowerCase()}` : `${serving} g`) : null,
       })
       .select(FOOD_COLUMNS)
       .single();
@@ -417,7 +522,16 @@ function CustomFoodForm({ initialName, onCancel, onCreated }: { initialName: str
         {number('Fiber', 'fiber', 'g')}
         {number('Sugar', 'sugar', 'g')}
         {number('Sodium', 'sodium', 'mg')}
-        {number('1 serving', 'serving', 'g')}
+      </div>
+
+      <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-slate-400">One serving (optional)</p>
+      <p className="-mt-2 text-xs font-bold text-slate-400">For things you count: 1 bar, 1 slice, 1 scoop.</p>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Name</span>
+          <input value={v.servingName} onChange={set('servingName')} placeholder="bar, slice, scoop" className={`${inputClass} mt-1`} />
+        </label>
+        {number('Weight', 'serving', 'g')}
       </div>
 
       {error && <p className="text-sm font-bold text-red-600">{error}</p>}
