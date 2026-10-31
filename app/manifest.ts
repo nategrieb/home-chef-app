@@ -6,6 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "THE MENU",
     description: "Recipes, meal plan and shopping list.",
     // The shopping list is the homepage.
+    id: "/",
     start_url: "/",
     scope: "/",
     display: "standalone",
