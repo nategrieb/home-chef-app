@@ -22,6 +22,7 @@ export default function MobileNav() {
     { name: 'List', path: '/' },
     { name: 'Recipes', path: '/recipes' },
     { name: 'Plan', path: '/meal-plan' },
+    { name: 'Log', path: '/log' },
     { name: 'Order', path: '/submit-order' },
   ];
 
@@ -46,7 +47,7 @@ export default function MobileNav() {
               <Link
                 key={item.path}
                 href={item.path}
-                className={`px-3.5 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] transition-all active:scale-95 ${
+                className={`px-2.5 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.1em] transition-all active:scale-95 ${
                   isActive
                     ? 'bg-[#004225] text-white shadow-sm'
                     : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
