@@ -1,11 +1,12 @@
 "use client";
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
 import AddFoodSheet from '../../components/log/AddFoodSheet';
 import GoalsSheet from '../../components/log/GoalsSheet';
+import { MAX_ENTRY_GRAMS, amountText } from '../../lib/portions';
 import {
   MEALS,
   localDateKey,
@@ -24,6 +25,8 @@ function toEntry(row: Record<string, unknown>): LogEntry {
   return {
     ...(row as unknown as LogEntry),
     grams: Number(row.grams),
+    quantity: row.quantity != null ? Number(row.quantity) : null,
+    portion_label: (row.portion_label as string | null) ?? null,
     kcal: Number(row.kcal),
     protein_g: Number(row.protein_g),
     carbs_g: Number(row.carbs_g),
@@ -99,11 +102,11 @@ export default function LogPage() {
     if (error) reload();
   }
 
-  async function changeGrams(entry: LogEntry, grams: number) {
+  async function changeAmount(entry: LogEntry, amount: { grams: number; quantity: number | null; portion_label: string | null }) {
     // Scale the saved totals, so edits work the same for foods, custom foods and recipes.
-    const f = grams / entry.grams;
+    const f = amount.grams / entry.grams;
     const next = {
-      grams,
+      ...amount,
       kcal: Math.round(entry.kcal * f * 10) / 10,
       protein_g: Math.round(entry.protein_g * f * 10) / 10,
       carbs_g: Math.round(entry.carbs_g * f * 10) / 10,
@@ -186,7 +189,7 @@ export default function LogPage() {
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-bold text-slate-900">{entry.name}</span>
                         <span className="block text-xs font-bold text-slate-400">
-                          {entry.grams} g · {Math.round(entry.protein_g)}P {Math.round(entry.carbs_g)}C {Math.round(entry.fat_g)}F
+                          {amountText(entry)} · {Math.round(entry.protein_g)}P {Math.round(entry.carbs_g)}C {Math.round(entry.fat_g)}F
                         </span>
                       </span>
                       <span className="shrink-0 text-sm font-black text-slate-700">{Math.round(entry.kcal)}</span>
@@ -218,7 +221,7 @@ export default function LogPage() {
         />
       )}
       {showGoals && <GoalsSheet goals={goals} onClose={() => setShowGoals(false)} onSaved={setGoals} />}
-      {editing && <EditEntrySheet entry={editing} onClose={() => setEditing(null)} onSave={changeGrams} onDelete={removeEntry} />}
+      {editing && <EditEntrySheet entry={editing} onClose={() => setEditing(null)} onSave={changeAmount} onDelete={removeEntry} />}
 
       <MobileNav />
     </main>
@@ -255,11 +258,34 @@ function EditEntrySheet({
 }: {
   entry: LogEntry;
   onClose: () => void;
-  onSave: (entry: LogEntry, grams: number) => void;
+  onSave: (entry: LogEntry, amount: { grams: number; quantity: number | null; portion_label: string | null }) => void;
   onDelete: (entry: LogEntry) => void;
 }) {
-  const [gramsText, setGramsText] = useState(String(entry.grams));
-  const grams = parseNumber(gramsText);
+  // Entries logged as "2 × large egg" are edited in eggs; "Use grams" switches to weight.
+  const counted = Boolean(entry.portion_label && entry.quantity);
+  const [byGrams, setByGrams] = useState(!counted);
+  const [text, setText] = useState(String(byGrams ? entry.grams : entry.quantity));
+  const inputRef = useRef<HTMLInputElement>(null);
+  const value = parseNumber(text);
+  const gramsPerUnit = counted ? entry.grams / (entry.quantity as number) : 1;
+  const newGrams = value ? Math.round(value * (byGrams ? 1 : gramsPerUnit) * 10) / 10 : null;
+
+  const tooMuch = newGrams != null && newGrams > MAX_ENTRY_GRAMS;
+
+  function switchMode(toGrams: boolean) {
+    setByGrams(toGrams);
+    setText(String(toGrams ? entry.grams : entry.quantity));
+    // Put the cursor back in the box with the number selected, so the next thing typed replaces it.
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+  }
+
+  function save() {
+    if (!value || !newGrams || newGrams <= 0 || tooMuch) return;
+    onSave(entry, byGrams ? { grams: newGrams, quantity: null, portion_label: null } : { grams: newGrams, quantity: value, portion_label: entry.portion_label });
+  }
 
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/70 p-4 backdrop-blur-sm sm:items-center" onClick={onClose}>
@@ -269,25 +295,36 @@ function EditEntrySheet({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="truncate text-lg font-black text-slate-900">{entry.name}</h2>
-        <label className="mt-4 block text-[10px] font-black uppercase tracking-widest text-slate-400">Amount in grams</label>
+        <label className="mt-4 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+          {byGrams ? 'Amount in grams' : `How many ${entry.portion_label}`}
+        </label>
         <div className="mt-2 flex items-center gap-3">
           <input
+            ref={inputRef}
             autoFocus
             inputMode="decimal"
-            value={gramsText}
-            onChange={(e) => setGramsText(e.target.value)}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             onFocus={(e) => e.target.select()}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-2xl font-bold text-slate-900 outline-none focus:border-[#004225]"
           />
-          <span className="text-lg font-black text-slate-400">g</span>
+          <span className="shrink-0 text-lg font-black text-slate-400">{byGrams ? 'g' : '×'}</span>
         </div>
+        <p className="mt-2 text-sm font-bold text-slate-400">
+          {tooMuch ? `${newGrams} g is over ${MAX_ENTRY_GRAMS / 1000} kg. Check the number.` : newGrams ? `= ${newGrams} g` : ' '}
+          {counted && (
+            <button onClick={() => switchMode(!byGrams)} className="ml-3 underline">
+              {byGrams ? `Use ${entry.portion_label}` : 'Use grams'}
+            </button>
+          )}
+        </p>
         <div className="mt-5 flex gap-3">
           <button onClick={() => onDelete(entry)} className="rounded-2xl bg-red-50 px-5 py-4 text-xs font-black uppercase tracking-widest text-red-600 active:scale-95">
             Delete
           </button>
           <button
-            onClick={() => grams && grams > 0 && onSave(entry, grams)}
-            disabled={!grams || grams <= 0}
+            onClick={save}
+            disabled={!newGrams || newGrams <= 0 || tooMuch}
             className="flex-1 rounded-2xl bg-[#004225] py-4 text-xs font-black uppercase tracking-widest text-white disabled:opacity-40 active:scale-95"
           >
             Save
