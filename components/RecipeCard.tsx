@@ -3,6 +3,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import MacroLine from './recipes/MacroLine';
+import type { ServingMacros } from '../lib/useRecipeNutrition';
 
 interface Ingredient {
   calories_per_unit: number;
@@ -25,9 +27,11 @@ interface Recipe {
 export default function RecipeCard({
   recipe,
   onAddToPlan,
+  nutrition,
 }: {
   recipe: Recipe;
   onAddToPlan: (id: string) => void;
+  nutrition?: ServingMacros;
 }) {
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
@@ -78,6 +82,8 @@ export default function RecipeCard({
               </p>
             )}
           </Link>
+
+          {nutrition && <MacroLine className="mt-2" {...nutrition} estimated={!!nutrition.review} />}
 
           <div className="mt-3 flex items-center gap-5">
             <button

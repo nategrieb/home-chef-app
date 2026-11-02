@@ -1,4 +1,5 @@
 "use client";
+import { useRecipeNutrition } from '../../lib/useRecipeNutrition';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import RecipeCard from '../../components/RecipeCard';
@@ -19,6 +20,7 @@ interface CurrentOrder {
 export default function Home() {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [filteredRecipes, setFilteredRecipes] = useState<any[]>([]);
+  const nutrition = useRecipeNutrition();
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [dietaryFilter, setDietaryFilter] = useState<'all' | (typeof CUISINE_OPTIONS)[number]>('all');
@@ -288,7 +290,7 @@ export default function Home() {
             </div>
           ) : (
             filteredRecipes.map((recipe) => (
-              <RecipeCard key={recipe.id} recipe={recipe} onAddToPlan={openAddToPlanPicker} />
+              <RecipeCard key={recipe.id} recipe={recipe} onAddToPlan={openAddToPlanPicker} nutrition={nutrition.get(recipe.id)} />
             ))
           )}
         </div>
