@@ -5,6 +5,7 @@ import { parseNumber, type Food } from '../../lib/nutrition';
 import { MAX_ENTRY_GRAMS } from '../../lib/portions';
 import { itemMacros, totalsOf, type RecipeItem, type RecipeNutritionRow } from '../../lib/recipe-nutrition';
 import FoodPicker from './FoodPicker';
+import { writeBackToIngredients, type ItemChange } from '../../lib/recipe-sync';
 
 type Props = {
   recipeId: string;
@@ -34,6 +35,10 @@ export default function RecipeNutritionSheet({ recipeId, title, existing, onClos
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [picker, setPicker] = useState<{ index: number | 'new' } | null>(null);
+  // What each line was when it loaded (null for a food added here), and the lines taken out. On save the changes are
+  // written back to the recipe's ingredients, so there is one recipe to keep up to date, not two.
+  const [origins, setOrigins] = useState<(RecipeItem | null)[]>(existing ? existing.items : []);
+  const [removed, setRemoved] = useState<RecipeItem[]>([]);
 
   // First time: draft from the recipe's ingredients.
   useEffect(() => {
@@ -46,6 +51,7 @@ export default function RecipeNutritionSheet({ recipeId, title, existing, onClos
         if (cancelled) return;
         if (!res.ok || !body.items) throw new Error(body.error ?? 'Could not draft nutrition');
         setItems(body.items);
+        setOrigins(body.items);
         setGramsText(body.items.map((i) => (i.grams ? String(i.grams) : '')));
       } catch (e) {
         if (cancelled) return;
@@ -71,6 +77,7 @@ export default function RecipeNutritionSheet({ recipeId, title, existing, onClos
     if (!picker || !items) return;
     if (picker.index === 'new') {
       setItems([...items, itemFromFood(food, 100)]);
+      setOrigins([...origins, null]);
       setGramsText([...gramsText, '100']);
     } else {
       const old = items[picker.index];
@@ -81,7 +88,10 @@ export default function RecipeNutritionSheet({ recipeId, title, existing, onClos
 
   function removeAt(index: number) {
     if (!items) return;
+    const gone = origins[index];
+    if (gone) setRemoved([...removed, gone]);
     setItems(items.filter((_, i) => i !== index));
+    setOrigins(origins.filter((_, i) => i !== index));
     setGramsText(gramsText.filter((_, i) => i !== index));
   }
 
@@ -105,6 +115,9 @@ export default function RecipeNutritionSheet({ recipeId, title, existing, onClos
       setSaveError(error.message);
       return;
     }
+    // Only lines that count (a food and an amount) change the recipe; blank ones are left as they were.
+    const changes: ItemChange[] = live.flatMap((item, i) => (item.grams > 0 && item.food_id ? [{ origin: origins[i], item }] : []));
+    await writeBackToIngredients(supabase, recipeId, changes, removed);
     onSaved(row);
     onClose();
   }
