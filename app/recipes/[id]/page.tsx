@@ -8,6 +8,10 @@ import PageSkeleton from '../../../components/PageSkeleton';
 import { inferCanonicalIngredient, inferPreparationNote } from '../../../lib/ingredient-normalization';
 import { formatQuantity, normalizeUnit } from '../../../lib/shopping';
 import { CUISINE_EMOJI, CUISINE_OPTIONS, type CuisineOption } from '../../../lib/cuisines';
+import AddFoodSheet from '../../../components/log/AddFoodSheet';
+import RecipeNutritionSheet from '../../../components/recipes/RecipeNutritionSheet';
+import { localDateKey, MEALS } from '../../../lib/nutrition';
+import { mealForNow, perServing, type RecipeNutritionRow } from '../../../lib/recipe-nutrition';
 
 const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'item', 'pinch', 'clove', 'slice', 'can', 'bunch', 'block', 'head', 'carton', 'bag', 'package', 'container', 'jar'] as const;
 const WEEKDAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
@@ -37,6 +41,10 @@ export default function RecipeDetail() {
   const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [showUtilityMenu, setShowUtilityMenu] = useState(false);
   const [copiedForCronometer, setCopiedForCronometer] = useState(false);
+  const [nutrition, setNutrition] = useState<RecipeNutritionRow | null>(null);
+  const [showNutritionSheet, setShowNutritionSheet] = useState(false);
+  const [showLogSheet, setShowLogSheet] = useState(false);
+  const [loggedMessage, setLoggedMessage] = useState<string | null>(null);
 
   const hydrateForm = (data: any) => {
     setTitle(data.title || '');
@@ -73,6 +81,28 @@ export default function RecipeDetail() {
     }
     fetchRecipe();
   }, [params.id, searchParams]);
+
+  // Nutrition for logging (set up once per recipe). If the table isn't there yet this stays empty.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from('recipe_nutrition').select('*').eq('recipe_id', params.id).maybeSingle();
+      if (cancelled || !data) return;
+      setNutrition({
+        recipe_id: data.recipe_id,
+        servings: Number(data.servings),
+        total_grams: Number(data.total_grams),
+        kcal: Number(data.kcal),
+        protein_g: Number(data.protein_g),
+        carbs_g: Number(data.carbs_g),
+        fat_g: Number(data.fat_g),
+        items: Array.isArray(data.items) ? data.items : [],
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
 
   const saveChanges = async () => {
     // Filter out empty ingredients
@@ -499,6 +529,55 @@ export default function RecipeDetail() {
           )}
         </header>
 
+        {!isEditing && recipe && (
+          <section className="mb-8 border border-slate-200 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Nutrition</p>
+              {nutrition && (
+                <button type="button" onClick={() => setShowNutritionSheet(true)} className="text-[11px] font-black uppercase tracking-wider text-slate-400 underline">
+                  Edit
+                </button>
+              )}
+            </div>
+            {nutrition ? (
+              <>
+                <p className="mt-2 text-3xl font-black text-slate-900">
+                  {Math.round(perServing(nutrition).kcal)} <span className="text-sm font-bold text-slate-400">kcal per serving</span>
+                </p>
+                <p className="mt-1 text-sm font-bold text-slate-500">
+                  {Math.round(perServing(nutrition).protein_g)} g protein · {Math.round(perServing(nutrition).carbs_g)} g carbs · {Math.round(perServing(nutrition).fat_g)} g fat · makes {nutrition.servings} serving{nutrition.servings === 1 ? '' : 's'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoggedMessage(null);
+                    setShowLogSheet(true);
+                  }}
+                  className="mt-4 w-full bg-[#004225] px-4 py-3 text-xs font-black uppercase tracking-widest text-white active:scale-[0.99]"
+                >
+                  Log to diary
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-sm font-bold text-slate-500">Add the nutrition once, then this recipe logs to your diary in a tap.</p>
+                <button
+                  type="button"
+                  onClick={() => setShowNutritionSheet(true)}
+                  className="mt-3 w-full border border-[#004225] px-4 py-3 text-xs font-black uppercase tracking-widest text-[#004225] active:scale-[0.99]"
+                >
+                  Add nutrition
+                </button>
+              </>
+            )}
+            {loggedMessage && (
+              <p className="mt-3 text-xs font-bold text-emerald-700">
+                {loggedMessage} · <a href="/log" className="underline">View log</a>
+              </p>
+            )}
+          </section>
+        )}
+
         {isEditing && (
           <div className="sticky top-4 z-40 mb-6 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-none p-3">
             <div className="flex items-center justify-between gap-3 mb-2">
@@ -827,6 +906,24 @@ export default function RecipeDetail() {
             </div>
           </div>
         </div>
+      )}
+      {showNutritionSheet && recipe && (
+        <RecipeNutritionSheet
+          recipeId={recipe.id}
+          title={title}
+          existing={nutrition}
+          onClose={() => setShowNutritionSheet(false)}
+          onSaved={setNutrition}
+        />
+      )}
+      {showLogSheet && recipe && nutrition && (
+        <AddFoodSheet
+          meal={mealForNow()}
+          date={localDateKey()}
+          initialRecipeId={recipe.id}
+          onClose={() => setShowLogSheet(false)}
+          onAdded={(entry) => setLoggedMessage(`Logged to ${MEALS.find((m) => m.key === entry.meal)?.label ?? 'your diary'}`)}
+        />
       )}
       <MobileNav />
     </main>

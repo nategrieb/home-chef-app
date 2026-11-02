@@ -95,6 +95,8 @@ function fromUsda(foodName: string, portions: UsdaPortion[]): Portion[] {
     const raw = (p.modifier ?? p.portionDescription ?? '').trim();
     if (!raw) continue;
     const label = /nlea serving/i.test(raw) ? 'serving' : cleanLabel(raw, foodName);
+    // USDA sometimes lists plain ounces as "oz" or "onz"; ounces are always offered already.
+    if (/^(oz|onz|ounces?)$/.test(label)) continue;
     const kind: PortionKind = VOLUME.test(raw) ? 'volume' : 'count';
     out.push({ label, grams: p.gramWeight / (p.amount && p.amount > 0 ? p.amount : 1), kind, step: kind === 'volume' ? 0.5 : 1 });
   }
