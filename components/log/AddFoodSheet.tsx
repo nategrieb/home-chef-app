@@ -12,6 +12,7 @@ import {
 } from '../../lib/nutrition';
 import { MAX_ENTRY_GRAMS, amountText, buildPortions, type PortionOptions } from '../../lib/portions';
 import BarcodeScanner from './BarcodeScanner';
+import FoodPicker from '../recipes/FoodPicker';
 import { recipeAsFood, type RecipeNutritionRow } from '../../lib/recipe-nutrition';
 
 type Props = {
@@ -58,7 +59,16 @@ function useVisualViewport() {
 }
 
 /** What the "new food" form starts with: typed text, or what a barcode lookup learned. */
-type CustomStart = { name: string; brand: string; barcode: string | null; servingG: number | null; notice: string | null };
+type CustomStart = {
+  name: string;
+  brand: string;
+  /** What gets saved on the food: the digits, or an item key for price-coded store labels. */
+  barcode: string | null;
+  /** The number the scanner actually read, shown so a misread is easy to spot. */
+  scanned: string | null;
+  servingG: number | null;
+  notice: string | null;
+};
 
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
@@ -250,23 +260,33 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
         draft?: { name: string; brand: string | null; barcode: string; serving_g: number | null };
         offDown?: boolean;
         error?: string;
+        storeKey?: string;
+        priceCoded?: boolean;
       };
+      if (body.status === 'invalid') {
+        setError(body.error ?? 'That doesn’t look like a barcode.');
+        return;
+      }
       if (body.status === 'found' && body.food) {
         await choose(body.food);
         return;
       }
       const draft = body.draft;
+      const label = body.priceCoded
+        ? 'This looks like a store label with the price in the number, so it is saved by item and every label for it will match.'
+        : 'It will be remembered for next time.';
       setCustomStart({
         name: draft?.name ?? '',
         brand: draft?.brand ?? '',
-        barcode: code,
+        barcode: body.storeKey ?? code,
+        scanned: code,
         servingG: draft?.serving_g ?? null,
         notice:
           body.status === 'incomplete'
-            ? `Found “${draft?.name}”, but it has no nutrition listed. Enter it from the label (per 100 g) and it will be remembered for next time.`
+            ? `Found “${draft?.name}”, but it has no nutrition listed. Enter it from the label (per 100 g). ${label}`
             : body.offDown
-              ? 'The food database didn’t answer. Enter this one from the label and it will be remembered for next time.'
-              : 'This barcode isn’t in the food databases. Enter it from the label (per 100 g) and it will be remembered for next time.',
+              ? `The food database didn’t answer. Enter this one from the label. ${label}`
+              : `This barcode isn’t in the food databases. Enter it from the label (per 100 g). ${label}`,
       });
       setView('custom');
     } catch {
@@ -570,7 +590,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
 
           {view === 'custom' && (
             <CustomFoodForm
-              start={customStart ?? { name: query.trim(), brand: '', barcode: null, servingG: null, notice: null }}
+              start={customStart ?? { name: query.trim(), brand: '', barcode: null, scanned: null, servingG: null, notice: null }}
               onCancel={() => {
                 setCustomStart(null);
                 setView('search');
@@ -588,6 +608,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
 }
 
 function CustomFoodForm({ start, onCancel, onCreated }: { start: CustomStart; onCancel: () => void; onCreated: (food: Food) => void }) {
+  const [picking, setPicking] = useState(false);
   const [name, setName] = useState(start.name);
   const [brand, setBrand] = useState(start.brand);
   const [v, setV] = useState({
@@ -650,6 +671,21 @@ function CustomFoodForm({ start, onCancel, onCreated }: { start: CustomStart; on
     onCreated(data as Food);
   }
 
+  /** Remember this barcode for a food you already have, instead of creating a second one. */
+  async function attachTo(food: Food) {
+    if (!start.barcode) return;
+    setPicking(false);
+    setSaving(true);
+    setError(null);
+    const { error: linkError } = await supabase.from('food_barcodes').upsert({ barcode: start.barcode, food_id: food.id }, { onConflict: 'owner_id,barcode' });
+    setSaving(false);
+    if (linkError) {
+      setError(linkError.message.includes('food_barcodes') ? 'Barcode links aren’t set up yet. Run add-food-barcodes.sql in Supabase.' : linkError.message);
+      return;
+    }
+    onCreated(food);
+  }
+
   const number = (label: string, key: keyof typeof v, unit: string) => (
     <label className="block">
       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
@@ -662,7 +698,20 @@ function CustomFoodForm({ start, onCancel, onCreated }: { start: CustomStart; on
 
   return (
     <div className="space-y-3">
-      {start.notice && <p className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">{start.notice}</p>}
+      {start.notice && (
+        <div className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
+          {start.scanned && <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-amber-700">Scanned {start.scanned}</p>}
+          <p>{start.notice}</p>
+        </div>
+      )}
+      {start.barcode && (
+        <button
+          onClick={() => setPicking(true)}
+          className="w-full rounded-2xl border-2 border-dashed border-slate-300 py-3.5 text-xs font-black uppercase tracking-widest text-slate-600 active:border-[#004225] active:text-[#004225]"
+        >
+          It’s a food I already have
+        </button>
+      )}
       <label className="block">
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Name</span>
         <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputClass} mt-1`} />
@@ -694,6 +743,8 @@ function CustomFoodForm({ start, onCancel, onCreated }: { start: CustomStart; on
       </div>
 
       {error && <p className="text-sm font-bold text-red-600">{error}</p>}
+
+      {picking && <FoodPicker title="Which food is it?" onPick={attachTo} onClose={() => setPicking(false)} />}
 
       <div className="flex gap-3 pt-2">
         <button onClick={onCancel} className="flex-1 rounded-2xl border border-slate-200 py-4 text-xs font-black uppercase tracking-widest text-slate-500 active:bg-slate-50">
