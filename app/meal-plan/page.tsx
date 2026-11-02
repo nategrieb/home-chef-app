@@ -7,10 +7,13 @@ import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
 import PageSkeleton from '../../components/PageSkeleton';
 import { markRecipeIngredientsUnchecked } from '../../lib/shopping';
+import { useRecipeNutrition } from '../../lib/useRecipeNutrition';
+import MacroLine from '../../components/recipes/MacroLine';
 
 export default function MealPlan() {
   const [mealPlans, setMealPlans] = useState<any[]>([]);
   const [recipes, setRecipes] = useState<any[]>([]);
+  const nutrition = useRecipeNutrition();
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedRecipe, setSelectedRecipe] = useState<string>('');
@@ -72,7 +75,15 @@ export default function MealPlan() {
       </div>
 
       <div className="space-y-6">
-        {weekDays.map((day, index) => (
+        {weekDays.map((day, index) => {
+          // One serving of each planned recipe. Meals without nutrition are left out and counted separately.
+          const meals = mealPlans.filter((p) => p.day_of_week === index);
+          const known = meals.map((m) => nutrition.get(m.recipe?.id)).filter((n): n is NonNullable<typeof n> => !!n);
+          const sum = known.reduce(
+            (t, n) => ({ kcal: t.kcal + n.kcal, protein_g: t.protein_g + n.protein_g, carbs_g: t.carbs_g + n.carbs_g, fat_g: t.fat_g + n.fat_g }),
+            { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
+          );
+          return (
           <section key={index} className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center font-black uppercase text-[10px] tracking-widest text-slate-400">
               <span>{format(day, 'EEEE')}</span>
@@ -87,12 +98,21 @@ export default function MealPlan() {
                   <button onClick={() => removeMealFromPlan(meal.id)} className="h-14 w-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center font-black shadow-sm">×</button>
                 </div>
               ))}
+              {known.length > 0 && (
+                <div className="px-1 pt-1">
+                  <MacroLine {...sum} estimated={known.some((n) => n.review)} />
+                  <p className="mt-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    {known.length === meals.length ? `${meals.length} meal${meals.length === 1 ? '' : 's'}, 1 serving each` : `${known.length} of ${meals.length} meals counted`}
+                  </p>
+                </div>
+              )}
               <button onClick={() => setSelectedDate(`${index}`)} className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs font-black uppercase tracking-widest active:border-[#004225] active:text-[#004225] transition-all">
                 + Add Meal
               </button>
             </div>
           </section>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add Meal Modal */}
