@@ -19,11 +19,10 @@ export default function MobileNav() {
   }, []);
 
   const navItems = [
-    { name: 'List', path: '/' },
+    { name: 'Today', path: '/' },
     { name: 'Recipes', path: '/recipes' },
     { name: 'Plan', path: '/meal-plan' },
     { name: 'Log', path: '/log' },
-    { name: 'Order', path: '/submit-order' },
   ];
 
   const label = (item: { name: string; path: string }) => (

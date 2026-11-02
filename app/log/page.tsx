@@ -6,6 +6,8 @@ import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
 import AddFoodSheet from '../../components/log/AddFoodSheet';
 import GoalsSheet from '../../components/log/GoalsSheet';
+import { Bar, Macro } from '../../components/log/Bars';
+import { NO_GOALS, fetchDay, toEntry, type DayResult } from '../../lib/day-log';
 import { MAX_ENTRY_GRAMS, amountText } from '../../lib/portions';
 import {
   MEALS,
@@ -17,44 +19,6 @@ import {
   type LogEntry,
   type MealSlot,
 } from '../../lib/nutrition';
-
-const NO_GOALS: Goals = { kcal: null, protein_g: null, carbs_g: null, fat_g: null };
-
-// numeric columns can arrive as strings depending on the driver; normalise once.
-function toEntry(row: Record<string, unknown>): LogEntry {
-  return {
-    ...(row as unknown as LogEntry),
-    grams: Number(row.grams),
-    quantity: row.quantity != null ? Number(row.quantity) : null,
-    portion_label: (row.portion_label as string | null) ?? null,
-    kcal: Number(row.kcal),
-    protein_g: Number(row.protein_g),
-    carbs_g: Number(row.carbs_g),
-    fat_g: Number(row.fat_g),
-  };
-}
-
-type DayResult = { entries: LogEntry[]; goals: Goals | null; error: string | null };
-
-async function fetchDay(day: string): Promise<DayResult> {
-  const [log, goalRow] = await Promise.all([
-    supabase.from('food_log').select('*').eq('logged_on', day).order('created_at'),
-    supabase.from('nutrition_goals').select('kcal, protein_g, carbs_g, fat_g').maybeSingle(),
-  ]);
-  const goals: Goals | null = goalRow.data
-    ? {
-        kcal: goalRow.data.kcal != null ? Number(goalRow.data.kcal) : null,
-        protein_g: goalRow.data.protein_g != null ? Number(goalRow.data.protein_g) : null,
-        carbs_g: goalRow.data.carbs_g != null ? Number(goalRow.data.carbs_g) : null,
-        fat_g: goalRow.data.fat_g != null ? Number(goalRow.data.fat_g) : null,
-      }
-    : null;
-  return {
-    entries: log.error ? [] : (log.data ?? []).map(toEntry),
-    goals,
-    error: log.error?.message ?? null,
-  };
-}
 
 function dateLabel(key: string, today: string) {
   if (key === today) return 'Today';
@@ -225,28 +189,6 @@ export default function LogPage() {
 
       <MobileNav />
     </main>
-  );
-}
-
-function Bar({ value, goal, className = '' }: { value: number; goal: number; className?: string }) {
-  const pct = Math.min(100, Math.max(0, (value / goal) * 100));
-  return (
-    <div className={`h-2 overflow-hidden rounded-full bg-slate-100 ${className}`}>
-      <div className={`h-full rounded-full ${value > goal ? 'bg-amber-500' : 'bg-[#004225]'}`} style={{ width: `${pct}%` }} />
-    </div>
-  );
-}
-
-function Macro({ label, value, goal }: { label: string; value: number; goal: number | null }) {
-  return (
-    <div>
-      <p className="text-lg font-black text-slate-900">
-        {Math.round(value)}
-        <span className="text-xs font-bold text-slate-400">{goal ? ` / ${Math.round(goal)}` : ''} g</span>
-      </p>
-      <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-      {goal ? <Bar value={value} goal={goal} /> : null}
-    </div>
   );
 }
 

@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "THE MENU",
     short_name: "THE MENU",
     description: "Recipes, meal plan and shopping list.",
-    // The shopping list is the homepage.
+    // Today (calories, shopping list, what's planned) is the homepage.
     id: "/",
     start_url: "/",
     scope: "/",
@@ -17,8 +17,8 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     shortcuts: [
-      { name: "Shopping list", url: "/" },
-      { name: "Recipes", url: "/recipes" },
+      { name: "Shopping list", url: "/list" },
+      { name: "Log food", url: "/log" },
       { name: "Meal plan", url: "/meal-plan" },
     ],
   };
