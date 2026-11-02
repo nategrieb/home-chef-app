@@ -15,11 +15,15 @@ import BarcodeScanner from './BarcodeScanner';
 import FoodForm, { type CustomStart } from './FoodForm';
 import { recipeAsFood, type RecipeNutritionRow } from '../../lib/recipe-nutrition';
 
+export type PickedFood = { food: Food; grams: number; quantity: number | null; portionLabel: string | null };
+
 type Props = {
   meal: MealSlot;
   date: string;
   onClose: () => void;
   onAdded: (entry: LogEntry) => void;
+  /** Pick mode (adding an ingredient to a recipe): hands back the food and amount instead of logging it. */
+  onPick?: (pick: PickedFood) => void;
   /** Open straight on this recipe's amount screen (the Log button on a recipe page). */
   initialRecipeId?: string;
   /** Open straight on the barcode scanner (the Scan button on Today). */
@@ -60,7 +64,7 @@ function useVisualViewport() {
 
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
-export default function AddFoodSheet({ meal, date, onClose, onAdded, initialRecipeId, startWith }: Props) {
+export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, initialRecipeId, startWith }: Props) {
   const [view, setView] = useState<'search' | 'amount' | 'custom' | 'scan'>(initialRecipeId ? 'amount' : startWith === 'scan' ? 'scan' : 'search');
   const [lookingUp, setLookingUp] = useState(false);
   const [customStart, setCustomStart] = useState<CustomStart | null>(null);
@@ -83,6 +87,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
 
   // Recipes with nutrition, and recent foods and recipes: one tap to log them again, at the amount you last used.
   useEffect(() => {
+    if (onPick) return; // picking an ingredient needs none of this
     let cancelled = false;
     (async () => {
       // If the recipe nutrition table isn't set up yet this just comes back empty.
@@ -286,6 +291,11 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
   }
 
   async function addEntry(food: Food, amount: Preset) {
+    if (onPick) {
+      onPick({ food, ...amount });
+      onClose();
+      return;
+    }
     setSaving(true);
     setError(null);
     const macros = macrosForGrams(food, amount.grams);
@@ -323,7 +333,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
     grams && unit && quantity ? { grams, quantity: unit.label === 'g' ? null : quantity, portionLabel: unit.label === 'g' ? null : unit.label } : null;
   const showResults = query.trim().length >= 2;
   const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const matchingRecipes = recipes.filter((r) => queryTerms.every((t) => r.name.toLowerCase().includes(t)));
+  const matchingRecipes = onPick ? [] : recipes.filter((r) => queryTerms.every((t) => r.name.toLowerCase().includes(t)));
   const recipeServing = (food: Food): Preset => ({ grams: food.serving_g ?? 0, quantity: 1, portionLabel: 'serving' });
   const recipeRow = (food: Food) => (
     <li key={`recipe-${food.id}`} className="flex items-center gap-2">
@@ -357,7 +367,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
       >
         <div className="flex shrink-0 items-center justify-between px-6 pb-3 pt-5">
           <h2 className="text-xl font-black text-slate-900">
-            {view === 'custom' ? (editingFood ? 'Edit food' : 'New food') : view === 'amount' ? 'How much?' : view === 'scan' ? 'Scan a barcode' : 'Add food'}
+            {view === 'custom' ? (editingFood ? 'Edit food' : 'New food') : view === 'amount' ? 'How much?' : view === 'scan' ? 'Scan a barcode' : onPick ? 'Add ingredient' : 'Add food'}
           </h2>
           <button onClick={onClose} aria-label="Close" className="h-10 w-10 rounded-full text-2xl font-black text-slate-400 active:bg-slate-100">
             ×
@@ -365,7 +375,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
         </div>
 
         <div className="shrink-0 px-6">
-          <div className="mb-3 flex gap-1.5">
+          <div className={`mb-3 flex gap-1.5 ${onPick ? 'hidden' : ''}`}>
             {MEALS.map((m) => (
               <button
                 key={m.key}
@@ -575,7 +585,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
                   disabled={!grams || saving || tooMuch}
                   className="flex-1 rounded-2xl bg-[#004225] py-4 text-xs font-black uppercase tracking-widest text-white disabled:opacity-40 active:scale-95"
                 >
-                  {saving ? 'Adding…' : 'Add'}
+                  {saving ? 'Adding…' : onPick ? 'Add to recipe' : 'Add'}
                 </button>
               </div>
             </>

@@ -99,7 +99,7 @@ export default function RecipeNutritionSheet({ recipeId, title, existing, onClos
       fat_g: totals.fat_g,
       items: counted,
     };
-    const { error } = await supabase.from('recipe_nutrition').upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'recipe_id' });
+    const { error } = await supabase.from('recipe_nutrition').upsert({ ...row, ...(existing?.review ? { review: null } : {}), updated_at: new Date().toISOString() }, { onConflict: 'recipe_id' });
     setSaving(false);
     if (error) {
       setSaveError(error.message);

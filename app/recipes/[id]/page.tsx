@@ -8,7 +8,7 @@ import PageSkeleton from '../../../components/PageSkeleton';
 import { inferCanonicalIngredient, inferPreparationNote } from '../../../lib/ingredient-normalization';
 import { formatQuantity, normalizeUnit } from '../../../lib/shopping';
 import { CUISINE_EMOJI, CUISINE_OPTIONS, type CuisineOption } from '../../../lib/cuisines';
-import AddFoodSheet from '../../../components/log/AddFoodSheet';
+import AddFoodSheet, { type PickedFood } from '../../../components/log/AddFoodSheet';
 import RecipeNutritionSheet from '../../../components/recipes/RecipeNutritionSheet';
 import { localDateKey, MEALS } from '../../../lib/nutrition';
 import { mealForNow, perServing, type RecipeNutritionRow } from '../../../lib/recipe-nutrition';
@@ -23,6 +23,7 @@ export default function RecipeDetail() {
   const [recipe, setRecipe] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [pickingIngredient, setPickingIngredient] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'instructions'>('ingredients');
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
@@ -158,6 +159,9 @@ export default function RecipeDetail() {
             item_name: normalizedName,
             amount: ing.amount || 0,
             unit: normalizeUnit(ing.unit),
+            // Only sent when the ingredient was picked from the food database (or already had a link), so this still
+            // saves before the link columns exist.
+            ...(ing.food_id ? { food_id: ing.food_id, grams: ing.grams ?? null } : {}),
             recipe_id: params.id,
             calories_per_unit: 0,
           };
@@ -186,6 +190,14 @@ export default function RecipeDetail() {
     window.requestAnimationFrame(() => {
       const input = document.getElementById(`recipe-ingredient-name-${index}`) as HTMLInputElement | null;
       input?.focus();
+    });
+  };
+
+  // A food found by search or barcode becomes an ingredient measured in grams, linked so its nutrition is exact.
+  const addPickedIngredient = ({ food, grams }: PickedFood) => {
+    setIngredients((prev) => {
+      const blank = prev.filter((ing) => !(ing.item_name.trim() === '' && !ing.amount));
+      return [...blank, { item_name: food.name, amount: String(Math.round(grams * 10) / 10), unit: 'g', food_id: food.id, grams }];
     });
   };
 
@@ -547,6 +559,11 @@ export default function RecipeDetail() {
                 <p className="mt-1 text-sm font-bold text-slate-500">
                   {Math.round(perServing(nutrition).protein_g)} g protein · {Math.round(perServing(nutrition).carbs_g)} g carbs · {Math.round(perServing(nutrition).fat_g)} g fat · makes {nutrition.servings} serving{nutrition.servings === 1 ? '' : 's'}
                 </p>
+                {nutrition.review && (
+                  <p className="mt-2 text-xs font-bold text-amber-700">
+                    {nutrition.review === 'check' ? 'Estimated from the ingredients, and some lines were unclear. Tap Edit to check it.' : 'Estimated from the ingredients. Tap Edit if it looks off.'}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -788,14 +805,14 @@ export default function RecipeDetail() {
                       <input 
                         value={ing.amount} 
                         placeholder="Qty"
-                        onChange={e => { const n = [...ingredients]; n[i].amount = e.target.value; setIngredients(n); }} 
+                        onChange={e => { const n = [...ingredients]; n[i].amount = e.target.value; n[i].grams = null; setIngredients(n); }} 
                         onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
                         className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-none text-center font-bold text-black outline-none" 
                         style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                       />
                       <select
                         value={ing.unit || 'g'}
-                        onChange={e => { const n = [...ingredients]; n[i].unit = e.target.value; setIngredients(n); }}
+                        onChange={e => { const n = [...ingredients]; n[i].unit = e.target.value; n[i].grams = null; setIngredients(n); }}
                         onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
                         className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-none text-center font-bold text-black outline-none"
                         style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
@@ -821,10 +838,16 @@ export default function RecipeDetail() {
               </div>
             ))}
             {isEditing && (
-              <button onClick={() => appendRecipeIngredient(true)} className="quiet-action w-full p-4 text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
-                + Add Ingredient
-                <span aria-hidden="true" className="quiet-action-line" />
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => appendRecipeIngredient(true)} className="quiet-action w-full p-4 text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
+                  + Add Ingredient
+                  <span aria-hidden="true" className="quiet-action-line" />
+                </button>
+                <button onClick={() => setPickingIngredient(true)} className="quiet-action w-full p-4 text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
+                  Scan / find food
+                  <span aria-hidden="true" className="quiet-action-line" />
+                </button>
+              </div>
             )}
           </div>
         </section>
@@ -923,6 +946,15 @@ export default function RecipeDetail() {
           initialRecipeId={recipe.id}
           onClose={() => setShowLogSheet(false)}
           onAdded={(entry) => setLoggedMessage(`Logged to ${MEALS.find((m) => m.key === entry.meal)?.label ?? 'your diary'}`)}
+        />
+      )}
+      {pickingIngredient && (
+        <AddFoodSheet
+          meal="lunch"
+          date={localDateKey()}
+          onClose={() => setPickingIngredient(false)}
+          onAdded={() => {}}
+          onPick={addPickedIngredient}
         />
       )}
       <MobileNav />
