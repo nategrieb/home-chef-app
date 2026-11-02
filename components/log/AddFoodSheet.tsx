@@ -11,6 +11,7 @@ import {
   type MealSlot,
 } from '../../lib/nutrition';
 import { MAX_ENTRY_GRAMS, amountText, buildPortions, type PortionOptions } from '../../lib/portions';
+import BarcodeScanner from './BarcodeScanner';
 import { recipeAsFood, type RecipeNutritionRow } from '../../lib/recipe-nutrition';
 
 type Props = {
@@ -54,10 +55,15 @@ function useVisualViewport() {
   return { height, offsetTop };
 }
 
+/** What the "new food" form starts with: typed text, or what a barcode lookup learned. */
+type CustomStart = { name: string; brand: string; barcode: string | null; servingG: number | null; notice: string | null };
+
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
 export default function AddFoodSheet({ meal, date, onClose, onAdded, initialRecipeId }: Props) {
-  const [view, setView] = useState<'search' | 'amount' | 'custom'>(initialRecipeId ? 'amount' : 'search');
+  const [view, setView] = useState<'search' | 'amount' | 'custom' | 'scan'>(initialRecipeId ? 'amount' : 'search');
+  const [lookingUp, setLookingUp] = useState(false);
+  const [customStart, setCustomStart] = useState<CustomStart | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Food[]>([]);
   const [searching, setSearching] = useState(false);
@@ -230,6 +236,44 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
     setQtyText(String(next));
   }
 
+  /** A barcode was scanned or typed: find the food, or open the form with whatever we learned. */
+  async function handleCode(code: string) {
+    setLookingUp(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/foods/barcode?code=${encodeURIComponent(code)}`);
+      const body = (await res.json()) as {
+        status: string;
+        food?: Food;
+        draft?: { name: string; brand: string | null; barcode: string; serving_g: number | null };
+        offDown?: boolean;
+        error?: string;
+      };
+      if (body.status === 'found' && body.food) {
+        await choose(body.food);
+        return;
+      }
+      const draft = body.draft;
+      setCustomStart({
+        name: draft?.name ?? '',
+        brand: draft?.brand ?? '',
+        barcode: code,
+        servingG: draft?.serving_g ?? null,
+        notice:
+          body.status === 'incomplete'
+            ? `Found “${draft?.name}”, but it has no nutrition listed. Enter it from the label (per 100 g) and it will be remembered for next time.`
+            : body.offDown
+              ? 'The food database didn’t answer. Enter this one from the label and it will be remembered for next time.'
+              : 'This barcode isn’t in the food databases. Enter it from the label (per 100 g) and it will be remembered for next time.',
+      });
+      setView('custom');
+    } catch {
+      setError('Couldn’t look that up. Check your connection and try again.');
+    } finally {
+      setLookingUp(false);
+    }
+  }
+
   async function addEntry(food: Food, amount: Preset) {
     setSaving(true);
     setError(null);
@@ -302,7 +346,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
       >
         <div className="flex shrink-0 items-center justify-between px-6 pb-3 pt-5">
           <h2 className="text-xl font-black text-slate-900">
-            {view === 'custom' ? 'New food' : view === 'amount' ? 'How much?' : 'Add food'}
+            {view === 'custom' ? 'New food' : view === 'amount' ? 'How much?' : view === 'scan' ? 'Scan a barcode' : 'Add food'}
           </h2>
           <button onClick={onClose} aria-label="Close" className="h-10 w-10 rounded-full text-2xl font-black text-slate-400 active:bg-slate-100">
             ×
@@ -326,13 +370,27 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
 
           {view === 'search' && (
             <>
-              <input
-                autoFocus
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search foods, e.g. lentils, greek yogurt"
-                className={inputClass}
-              />
+              <div className="flex gap-2">
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search foods, e.g. lentils, greek yogurt"
+                  className={`${inputClass} min-w-0`}
+                />
+                <button
+                  onClick={() => {
+                    setError(null);
+                    setView('scan');
+                  }}
+                  aria-label="Scan a barcode"
+                  className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-[#004225] text-white active:scale-95"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8V6a2 2 0 012-2h2M17 4h2a2 2 0 012 2v2M21 16v2a2 2 0 01-2 2h-2M7 20H5a2 2 0 01-2-2v-2M7 8v8M11 8v8M14 8v8M17 8v8" />
+                  </svg>
+                </button>
+              </div>
               {notice && <p className="mt-3 text-xs font-bold text-amber-700">{notice}</p>}
             </>
           )}
@@ -501,11 +559,24 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
             </>
           )}
 
+          {view === 'scan' && (
+            <>
+              <BarcodeScanner onCode={handleCode} onCancel={() => setView('search')} busy={lookingUp} />
+              {error && <p className="mt-3 text-sm font-bold text-red-600">{error}</p>}
+            </>
+          )}
+
           {view === 'custom' && (
             <CustomFoodForm
-              initialName={query.trim()}
-              onCancel={() => setView('search')}
-              onCreated={(food) => choose(food)}
+              start={customStart ?? { name: query.trim(), brand: '', barcode: null, servingG: null, notice: null }}
+              onCancel={() => {
+                setCustomStart(null);
+                setView('search');
+              }}
+              onCreated={(food) => {
+                setCustomStart(null);
+                choose(food);
+              }}
             />
           )}
         </div>
@@ -514,10 +585,20 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
   );
 }
 
-function CustomFoodForm({ initialName, onCancel, onCreated }: { initialName: string; onCancel: () => void; onCreated: (food: Food) => void }) {
-  const [name, setName] = useState(initialName);
-  const [brand, setBrand] = useState('');
-  const [v, setV] = useState({ kcal: '', protein: '', carbs: '', fat: '', fiber: '', sugar: '', sodium: '', serving: '', servingName: '' });
+function CustomFoodForm({ start, onCancel, onCreated }: { start: CustomStart; onCancel: () => void; onCreated: (food: Food) => void }) {
+  const [name, setName] = useState(start.name);
+  const [brand, setBrand] = useState(start.brand);
+  const [v, setV] = useState({
+    kcal: '',
+    protein: '',
+    carbs: '',
+    fat: '',
+    fiber: '',
+    sugar: '',
+    sodium: '',
+    serving: start.servingG ? String(start.servingG) : '',
+    servingName: '',
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -543,6 +624,7 @@ function CustomFoodForm({ initialName, onCancel, onCreated }: { initialName: str
       .insert({
         source: 'custom',
         owner_id: auth.user.id,
+        barcode: start.barcode,
         name: name.trim(),
         brand: brand.trim() || null,
         kcal_100g: kcal,
@@ -578,6 +660,7 @@ function CustomFoodForm({ initialName, onCancel, onCreated }: { initialName: str
 
   return (
     <div className="space-y-3">
+      {start.notice && <p className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">{start.notice}</p>}
       <label className="block">
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Name</span>
         <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputClass} mt-1`} />
