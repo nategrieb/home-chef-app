@@ -152,7 +152,7 @@ export default function RecipeNutritionSheet({ recipeId, title, existing, onClos
                         <span className={`block truncate text-sm font-bold ${item.food_id ? 'text-slate-900' : 'text-amber-700'}`}>
                           {item.food_id ? item.name : 'No match: tap to choose a food'}
                         </span>
-                        <span className="block text-xs font-bold text-slate-400">{Math.round(itemMacros(item).kcal)} kcal</span>
+                        <span className="block text-xs font-bold text-slate-400">{Math.round(itemMacros(item).kcal)} kcal · {Math.round(itemMacros(item).protein_g)} P · {Math.round(itemMacros(item).carbs_g)} C · {Math.round(itemMacros(item).fat_g)} F</span>
                       </button>
                       <input
                         inputMode="decimal"

@@ -24,6 +24,8 @@ type Props = {
   onAdded: (entry: LogEntry) => void;
   /** Pick mode (adding an ingredient to a recipe): hands back the food and amount instead of logging it. */
   onPick?: (pick: PickedFood) => void;
+  /** Pick mode: lets the person skip the database and type the ingredient as text instead. */
+  onType?: () => void;
   /** Open straight on this recipe's amount screen (the Log button on a recipe page). */
   initialRecipeId?: string;
   /** Open straight on the barcode scanner (the Scan button on Today). */
@@ -64,7 +66,7 @@ function useVisualViewport() {
 
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
-export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, initialRecipeId, startWith }: Props) {
+export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onType, initialRecipeId, startWith }: Props) {
   const [view, setView] = useState<'search' | 'amount' | 'custom' | 'scan'>(initialRecipeId ? 'amount' : startWith === 'scan' ? 'scan' : 'search');
   const [lookingUp, setLookingUp] = useState(false);
   const [customStart, setCustomStart] = useState<CustomStart | null>(null);
@@ -472,9 +474,20 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, ini
                 </ul>
               )}
 
+              {onType && (
+                <button
+                  onClick={() => {
+                    onType();
+                    onClose();
+                  }}
+                  className="mt-5 w-full rounded-2xl bg-slate-100 py-4 text-xs font-black uppercase tracking-widest text-slate-600 active:bg-slate-200"
+                >
+                  Type it instead
+                </button>
+              )}
               <button
                 onClick={() => setView('custom')}
-                className="mt-5 w-full rounded-2xl border-2 border-dashed border-slate-200 py-4 text-xs font-black uppercase tracking-widest text-slate-400 active:border-[#004225] active:text-[#004225]"
+                className="mt-3 w-full rounded-2xl border-2 border-dashed border-slate-200 py-4 text-xs font-black uppercase tracking-widest text-slate-400 active:border-[#004225] active:text-[#004225]"
               >
                 + Create a food
               </button>
