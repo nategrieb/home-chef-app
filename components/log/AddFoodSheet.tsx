@@ -21,6 +21,8 @@ type Props = {
   onAdded: (entry: LogEntry) => void;
   /** Open straight on this recipe's amount screen (the Log button on a recipe page). */
   initialRecipeId?: string;
+  /** Open straight on the barcode scanner (the Scan button on Today). */
+  startWith?: 'scan';
 };
 
 type Preset = { grams: number; quantity: number | null; portionLabel: string | null };
@@ -60,8 +62,8 @@ type CustomStart = { name: string; brand: string; barcode: string | null; servin
 
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
-export default function AddFoodSheet({ meal, date, onClose, onAdded, initialRecipeId }: Props) {
-  const [view, setView] = useState<'search' | 'amount' | 'custom' | 'scan'>(initialRecipeId ? 'amount' : 'search');
+export default function AddFoodSheet({ meal, date, onClose, onAdded, initialRecipeId, startWith }: Props) {
+  const [view, setView] = useState<'search' | 'amount' | 'custom' | 'scan'>(initialRecipeId ? 'amount' : startWith === 'scan' ? 'scan' : 'search');
   const [lookingUp, setLookingUp] = useState(false);
   const [customStart, setCustomStart] = useState<CustomStart | null>(null);
   const [query, setQuery] = useState('');
