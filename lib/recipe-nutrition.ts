@@ -28,6 +28,8 @@ export type RecipeNutritionRow = {
   carbs_g: number;
   fat_g: number;
   items: RecipeItem[];
+  /** Set by the one-time backfill: 'estimated' = worth a glance, 'check' = something looked off. Cleared on any edit. */
+  review?: 'estimated' | 'check' | null;
 };
 
 export const itemMacros = (item: RecipeItem) => {
@@ -146,7 +148,14 @@ export function ingredientGrams(amount: number, unit: string | null | undefined,
   if (named) return { grams: amount * named.grams, guess: false };
   const typical = counts.find((p) => /\b(large|medium)\b/.test(p.label)) ?? counts[0];
   if (typical) return { grams: amount * typical.grams, guess: true };
+
+  // Packaging units with no household measure on the food: a typical size, flagged as a guess.
+  const typicalPack = PACKAGE_GRAMS[u];
+  if (typicalPack) return { grams: amount * typicalPack, guess: true };
   return null;
 }
+
+/** Rough weight of one can, jar or package when the food has no measure for it. */
+const PACKAGE_GRAMS: Record<string, number> = { can: 400, jar: 350, package: 300, container: 300, bag: 300, carton: 950 };
 
 export { FOOD_COLUMNS };

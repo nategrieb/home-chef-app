@@ -1,8 +1,8 @@
 import { buildPortions, type PortionOptions } from './portions';
 import { usdaFoodPortions } from './usda';
-import type { createServerSupabase } from './supabase-server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-type ServerSupabase = Awaited<ReturnType<typeof createServerSupabase>>;
+type ServerSupabase = SupabaseClient;
 
 /** The units a saved food can be logged in, and which one to start on. Null when the food isn't visible to this user. */
 export async function loadPortionOptions(supabase: ServerSupabase, foodId: string): Promise<PortionOptions | null> {

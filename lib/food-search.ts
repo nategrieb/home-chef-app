@@ -1,8 +1,8 @@
 import { FOOD_COLUMNS, foodSearchScore, type Food } from './nutrition';
 import { rankByQuery, toFoodRow, usdaSearch } from './usda';
-import type { createServerSupabase } from './supabase-server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-type ServerSupabase = Awaited<ReturnType<typeof createServerSupabase>>;
+type ServerSupabase = SupabaseClient;
 
 export type UsdaStatus = 'ok' | 'rate_limited' | 'unavailable' | 'cache_failed' | 'skipped';
 export type FoodSearchResult = { foods: Food[]; usda: UsdaStatus; error?: string };
