@@ -11,7 +11,7 @@ import { CUISINE_EMOJI, CUISINE_OPTIONS, type CuisineOption } from '../../../lib
 import AddFoodSheet, { type PickedFood } from '../../../components/log/AddFoodSheet';
 import RecipeNutritionSheet from '../../../components/recipes/RecipeNutritionSheet';
 import { localDateKey, MEALS } from '../../../lib/nutrition';
-import { mealForNow, perServing, type RecipeNutritionRow } from '../../../lib/recipe-nutrition';
+import { itemMacros, mealForNow, perServing, type RecipeNutritionRow } from '../../../lib/recipe-nutrition';
 
 const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'item', 'pinch', 'clove', 'slice', 'can', 'bunch', 'block', 'head', 'carton', 'bag', 'package', 'container', 'jar'] as const;
 const WEEKDAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
@@ -192,6 +192,20 @@ export default function RecipeDetail() {
       input?.focus();
     });
   };
+
+  // Each ingredient's share of the recipe's nutrition: the saved item linked to the same food, else the one made from its line.
+  const ingredientMacros = (() => {
+    const out: (ReturnType<typeof itemMacros> | null)[] = [];
+    const used = new Set<number>();
+    for (const ing of ingredients) {
+      const items = nutrition?.items ?? [];
+      let at = ing.food_id ? items.findIndex((it, k) => !used.has(k) && it.food_id === ing.food_id) : -1;
+      if (at < 0) at = items.findIndex((it, k) => !used.has(k) && !!it.line && !!ing.item_name && it.line.toLowerCase().endsWith(String(ing.item_name).trim().toLowerCase()));
+      if (at >= 0) used.add(at);
+      out.push(at >= 0 ? itemMacros(items[at]) : null);
+    }
+    return out;
+  })();
 
   // A food found by search or barcode becomes an ingredient measured in grams, linked so its nutrition is exact.
   const addPickedIngredient = ({ food, grams }: PickedFood) => {
@@ -831,6 +845,11 @@ export default function RecipeDetail() {
                     <span className="flex-1 min-w-0 group-has-[:checked]:text-slate-300 group-has-[:checked]:line-through">
                       <span className="font-bold text-slate-900 group-has-[:checked]:text-slate-300 block">{ing.item_name}</span>
                       {ing.preparation_note ? <span className="block text-xs font-medium text-slate-500 group-has-[:checked]:text-slate-300">{ing.preparation_note}</span> : null}
+                      {ingredientMacros[i] ? (
+                        <span className="block text-xs font-bold text-slate-400 group-has-[:checked]:text-slate-300">
+                          {Math.round(ingredientMacros[i]!.kcal)} kcal · {Math.round(ingredientMacros[i]!.protein_g)} P · {Math.round(ingredientMacros[i]!.carbs_g)} C · {Math.round(ingredientMacros[i]!.fat_g)} F
+                        </span>
+                      ) : null}
                     </span>
                     <span className="text-sm font-black text-slate-400 shrink-0">{formatQuantity(Number(ing.amount) || 0, ing.unit)}</span>
                   </label>
@@ -838,16 +857,10 @@ export default function RecipeDetail() {
               </div>
             ))}
             {isEditing && (
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => appendRecipeIngredient(true)} className="quiet-action w-full p-4 text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
-                  + Add Ingredient
-                  <span aria-hidden="true" className="quiet-action-line" />
-                </button>
-                <button onClick={() => setPickingIngredient(true)} className="quiet-action w-full p-4 text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
-                  Scan / find food
-                  <span aria-hidden="true" className="quiet-action-line" />
-                </button>
-              </div>
+              <button onClick={() => setPickingIngredient(true)} className="quiet-action w-full p-4 text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
+                + Add Ingredient
+                <span aria-hidden="true" className="quiet-action-line" />
+              </button>
             )}
           </div>
         </section>
@@ -955,6 +968,7 @@ export default function RecipeDetail() {
           onClose={() => setPickingIngredient(false)}
           onAdded={() => {}}
           onPick={addPickedIngredient}
+          onType={() => appendRecipeIngredient(true)}
         />
       )}
       <MobileNav />
