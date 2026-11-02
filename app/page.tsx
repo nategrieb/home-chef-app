@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import MobileNav from '../components/MobileNav';
@@ -23,12 +23,17 @@ export default function Today() {
   const today = useToday();
   const [sheet, setSheet] = useState<Sheet>(null);
 
+  // Settings links here to change goals (/?goals=1).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('goals')) setSheet({ kind: 'goals' });
+  }, []);
+
   if (shopping.loading) return <PageSkeleton title="Today" />;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-white to-slate-100 pb-44 px-4 sm:px-6 pt-6 sm:pt-8">
       <div className="mx-auto max-w-2xl">
-        <Header compact>
+        <Header compact showSettings>
           <Link href="/submit-order" className="p-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-800">
             Order
           </Link>
