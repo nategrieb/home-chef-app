@@ -25,6 +25,9 @@ export default function RecipeDetail() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [pickingIngredient, setPickingIngredient] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // The details (description, links, category, tags) stay folded while editing, except on a brand-new recipe.
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'instructions'>('ingredients');
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
@@ -78,6 +81,7 @@ export default function RecipeDetail() {
         // Auto-start editing for new recipes or when edit=true is in URL
         const shouldEdit = searchParams.get('edit') === 'true' || data.title === 'New Recipe';
         setIsEditing(shouldEdit);
+        if (data.title === 'New Recipe') setDetailsOpen(true);
       }
       setLoading(false);
     }
@@ -105,6 +109,16 @@ export default function RecipeDetail() {
       cancelled = true;
     };
   }, [params.id]);
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await saveChanges();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const saveChanges = async () => {
     // Filter out empty ingredients
@@ -428,6 +442,11 @@ export default function RecipeDetail() {
       />
       <div className="sticky top-0 z-50 border-b border-slate-100 bg-white/85 backdrop-blur-sm">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+          {isEditing ? (
+            <button type="button" onClick={cancelEditing} className="px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 active:text-slate-900">
+              {recipe?.title === 'New Recipe' ? 'Discard' : 'Cancel'}
+            </button>
+          ) : (
           <button
             type="button"
             onClick={() => router.back()}
@@ -440,8 +459,21 @@ export default function RecipeDetail() {
             <span className="sr-only">Back</span>
             <span aria-hidden="true" className="quiet-action-line" />
           </button>
+          )}
+
+          {isEditing && <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Editing</p>}
 
           <div className="flex items-center gap-2">
+            {isEditing && (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-[#004225] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white disabled:opacity-50 active:scale-95"
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            )}
             {!isEditing && (
               <div className="relative">
                 <button
@@ -490,7 +522,7 @@ export default function RecipeDetail() {
       </div>
 
       <div className="max-w-2xl mx-auto px-6 pt-8">
-        <Header />
+        {!isEditing && <Header />}
 
         {showRecipeImage ? (
           <div className="mb-6 overflow-hidden rounded-none border border-slate-200 bg-slate-100">
@@ -613,37 +645,15 @@ export default function RecipeDetail() {
           </section>
         )}
 
-        {isEditing && (
-          <div className="sticky top-4 z-40 mb-6 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-none p-3">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Editing Recipe</p>
-              <p className="text-xs text-slate-400">Save before leaving this page</p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                type="button"
-                onClick={saveChanges}
-                className="quiet-action w-full sm:w-auto px-4 py-2.5 text-sm font-black"
-              >
-                Save Changes
-                <span aria-hidden="true" className="quiet-action-line" />
-              </button>
-              <button
-                type="button"
-                onClick={cancelEditing}
-                className="quiet-action w-full sm:w-auto px-4 py-2.5 text-sm font-bold"
-              >
-                {recipe?.title === 'New Recipe' ? 'Cancel Draft' : 'Cancel'}
-                <span aria-hidden="true" className="quiet-action-line" />
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Info Section */}
-        <section className={isEditing ? "bg-slate-50 rounded-none p-6 mb-8 border border-slate-200" : "mb-8"}>
+        <section className={isEditing ? "mb-8" : "mb-8"}>
           {isEditing ? (
-            <div className="space-y-4">
+            <details open={detailsOpen} onToggle={(e) => setDetailsOpen((e.target as HTMLDetailsElement).open)} className="group border border-slate-200 bg-slate-50">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-600 [&::-webkit-details-marker]:hidden">
+              <span>Recipe details <span className="ml-1 font-bold normal-case tracking-normal text-slate-400">description, photo, category, tags</span></span>
+              <span aria-hidden="true" className="text-lg transition-transform group-open:rotate-45">+</span>
+            </summary>
+            <div className="space-y-4 p-4 pt-0">
               <textarea 
                 value={description} 
                 onChange={e => setDescription(e.target.value)} 
@@ -724,6 +734,7 @@ export default function RecipeDetail() {
                 placeholder="Tags (comma separated: Vegetarian, Gluten-Free, One-Pot)"
               />
             </div>
+            </details>
           ) : (
             <>
               {/* Tags Area */}
@@ -802,21 +813,18 @@ export default function RecipeDetail() {
         {/* Ingredients Section with Unit Input */}
         {activeTab === 'ingredients' && (
         <section className="mb-12">
-          {isEditing && (
-            <div className="mb-3 text-sm text-slate-500 font-medium">{ingredients.length} items</div>
-          )}
           <div className="space-y-3">
             {ingredients.map((ing: any, i: number) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-none border border-slate-100">
+              <div key={i} className={`flex items-center justify-between ${isEditing ? "p-3" : "p-4"} bg-slate-50 rounded-none border border-slate-100`}>
                 {isEditing ? (
-                  <div className="grid gap-3 w-full">
+                  <div className="grid gap-2 w-full">
                     <input 
                       id={`recipe-ingredient-name-${i}`}
                       value={ing.item_name} 
                       placeholder="Ingredient name"
                       onChange={e => { const n = [...ingredients]; n[i].item_name = e.target.value; setIngredients(n); }} 
                       onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
-                      className="w-full bg-white border border-slate-300 p-3 rounded-none font-bold text-black outline-none min-w-0" 
+                      className="w-full bg-white border border-slate-300 p-2.5 rounded-none font-bold text-black outline-none min-w-0" 
                       style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                     />
                     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 sm:grid-cols-[96px_1fr_auto] sm:max-w-sm">
@@ -825,14 +833,14 @@ export default function RecipeDetail() {
                         placeholder="Qty"
                         onChange={e => { const n = [...ingredients]; n[i].amount = e.target.value; n[i].grams = null; setIngredients(n); }} 
                         onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
-                        className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-none text-center font-bold text-black outline-none" 
+                        className="w-full min-w-0 bg-white border border-slate-300 p-2.5 rounded-none text-center font-bold text-black outline-none" 
                         style={{ color: '#000000', backgroundColor: '#FFFFFF' }} 
                       />
                       <select
                         value={ing.unit || 'g'}
                         onChange={e => { const n = [...ingredients]; n[i].unit = e.target.value; n[i].grams = null; setIngredients(n); }}
                         onKeyDown={(e) => handleRecipeIngredientEnter(e, i)}
-                        className="w-full min-w-0 bg-white border border-slate-300 p-3 rounded-none text-center font-bold text-black outline-none"
+                        className="w-full min-w-0 bg-white border border-slate-300 p-2.5 rounded-none text-center font-bold text-black outline-none"
                         style={{ color: '#000000', backgroundColor: '#FFFFFF' }}
                       >
                         {ing.unit && !UNIT_OPTIONS.includes(ing.unit) && <option value={ing.unit}>{ing.unit}</option>}
@@ -983,7 +991,7 @@ export default function RecipeDetail() {
           onType={() => appendRecipeIngredient(true)}
         />
       )}
-      <MobileNav />
+      {!isEditing && <MobileNav />}
     </main>
   );
 }
