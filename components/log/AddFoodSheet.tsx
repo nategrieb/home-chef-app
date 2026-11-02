@@ -12,6 +12,7 @@ import {
 } from '../../lib/nutrition';
 import { MAX_ENTRY_GRAMS, amountText, buildPortions, type PortionOptions } from '../../lib/portions';
 import BarcodeScanner from './BarcodeScanner';
+import FoodForm, { type CustomStart } from './FoodForm';
 import { recipeAsFood, type RecipeNutritionRow } from '../../lib/recipe-nutrition';
 
 type Props = {
@@ -57,15 +58,13 @@ function useVisualViewport() {
   return { height, offsetTop };
 }
 
-/** What the "new food" form starts with: typed text, or what a barcode lookup learned. */
-type CustomStart = { name: string; brand: string; barcode: string | null; servingG: number | null; notice: string | null };
-
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
 export default function AddFoodSheet({ meal, date, onClose, onAdded, initialRecipeId, startWith }: Props) {
   const [view, setView] = useState<'search' | 'amount' | 'custom' | 'scan'>(initialRecipeId ? 'amount' : startWith === 'scan' ? 'scan' : 'search');
   const [lookingUp, setLookingUp] = useState(false);
   const [customStart, setCustomStart] = useState<CustomStart | null>(null);
+  const [editingFood, setEditingFood] = useState<Food | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Food[]>([]);
   const [searching, setSearching] = useState(false);
@@ -250,23 +249,33 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
         draft?: { name: string; brand: string | null; barcode: string; serving_g: number | null };
         offDown?: boolean;
         error?: string;
+        storeKey?: string;
+        priceCoded?: boolean;
       };
+      if (body.status === 'invalid') {
+        setError(body.error ?? 'That doesn’t look like a barcode.');
+        return;
+      }
       if (body.status === 'found' && body.food) {
         await choose(body.food);
         return;
       }
       const draft = body.draft;
+      const label = body.priceCoded
+        ? 'This looks like a store label with the price in the number, so it is saved by item and every label for it will match.'
+        : 'It will be remembered for next time.';
       setCustomStart({
         name: draft?.name ?? '',
         brand: draft?.brand ?? '',
-        barcode: code,
+        barcode: body.storeKey ?? code,
+        scanned: code,
         servingG: draft?.serving_g ?? null,
         notice:
           body.status === 'incomplete'
-            ? `Found “${draft?.name}”, but it has no nutrition listed. Enter it from the label (per 100 g) and it will be remembered for next time.`
+            ? `Found “${draft?.name}”, but it has no nutrition listed. Enter it from the label (per 100 g). ${label}`
             : body.offDown
-              ? 'The food database didn’t answer. Enter this one from the label and it will be remembered for next time.'
-              : 'This barcode isn’t in the food databases. Enter it from the label (per 100 g) and it will be remembered for next time.',
+              ? `The food database didn’t answer. Enter this one from the label. ${label}`
+              : `This barcode isn’t in the food databases. Enter it from the label (per 100 g). ${label}`,
       });
       setView('custom');
     } catch {
@@ -348,7 +357,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
       >
         <div className="flex shrink-0 items-center justify-between px-6 pb-3 pt-5">
           <h2 className="text-xl font-black text-slate-900">
-            {view === 'custom' ? 'New food' : view === 'amount' ? 'How much?' : view === 'scan' ? 'Scan a barcode' : 'Add food'}
+            {view === 'custom' ? (editingFood ? 'Edit food' : 'New food') : view === 'amount' ? 'How much?' : view === 'scan' ? 'Scan a barcode' : 'Add food'}
           </h2>
           <button onClick={onClose} aria-label="Close" className="h-10 w-10 rounded-full text-2xl font-black text-slate-400 active:bg-slate-100">
             ×
@@ -466,6 +475,17 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
           {view === 'amount' && selected && (
             <>
               <p className="text-base font-black text-slate-900">{foodLabel(selected)}</p>
+              {selected.source === 'custom' && (
+                <button
+                  onClick={() => {
+                    setEditingFood(selected);
+                    setView('custom');
+                  }}
+                  className="mt-1 text-[11px] font-black uppercase tracking-widest text-[#004225] underline underline-offset-2"
+                >
+                  Edit this food
+                </button>
+              )}
               <p className="mt-1 text-xs font-bold text-slate-400">
                 {selected.source === 'recipe'
                   ? `Recipe · ${Math.round(macrosForGrams(selected, selected.serving_g ?? 0).kcal)} kcal per serving`
@@ -569,139 +589,26 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, initialReci
           )}
 
           {view === 'custom' && (
-            <CustomFoodForm
-              start={customStart ?? { name: query.trim(), brand: '', barcode: null, servingG: null, notice: null }}
+            <FoodForm
+              start={customStart ?? { name: query.trim(), brand: '', barcode: null, scanned: null, servingG: null, notice: null }}
+              existing={editingFood ?? undefined}
               onCancel={() => {
                 setCustomStart(null);
-                setView('search');
+                if (editingFood) {
+                  setView('amount');
+                  setEditingFood(null);
+                } else {
+                  setView('search');
+                }
               }}
-              onCreated={(food) => {
+              onSaved={(food) => {
                 setCustomStart(null);
+                setEditingFood(null);
                 choose(food);
               }}
             />
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function CustomFoodForm({ start, onCancel, onCreated }: { start: CustomStart; onCancel: () => void; onCreated: (food: Food) => void }) {
-  const [name, setName] = useState(start.name);
-  const [brand, setBrand] = useState(start.brand);
-  const [v, setV] = useState({
-    kcal: '',
-    protein: '',
-    carbs: '',
-    fat: '',
-    fiber: '',
-    sugar: '',
-    sodium: '',
-    serving: start.servingG ? String(start.servingG) : '',
-    servingName: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const set = (key: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV((prev) => ({ ...prev, [key]: e.target.value }));
-
-  async function save() {
-    const kcal = parseNumber(v.kcal);
-    if (!name.trim() || kcal == null) {
-      setError('Add a name and the calories per 100 g.');
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) {
-      setError('Sign in again to save foods.');
-      setSaving(false);
-      return;
-    }
-    const serving = parseNumber(v.serving);
-    const { data, error: insertError } = await supabase
-      .from('foods')
-      .insert({
-        source: 'custom',
-        owner_id: auth.user.id,
-        barcode: start.barcode,
-        name: name.trim(),
-        brand: brand.trim() || null,
-        kcal_100g: kcal,
-        protein_100g: parseNumber(v.protein) ?? 0,
-        carbs_100g: parseNumber(v.carbs) ?? 0,
-        fat_100g: parseNumber(v.fat) ?? 0,
-        fiber_100g: parseNumber(v.fiber),
-        sugar_100g: parseNumber(v.sugar),
-        sodium_mg_100g: parseNumber(v.sodium),
-        serving_g: serving,
-        // "1 bar", "1 slice": the unit name is what the amount screen offers next to grams.
-        serving_label: serving ? (v.servingName.trim() ? `1 ${v.servingName.trim().toLowerCase()}` : `${serving} g`) : null,
-      })
-      .select(FOOD_COLUMNS)
-      .single();
-    setSaving(false);
-    if (insertError || !data) {
-      setError(insertError?.message ?? 'Could not save that food.');
-      return;
-    }
-    onCreated(data as Food);
-  }
-
-  const number = (label: string, key: keyof typeof v, unit: string) => (
-    <label className="block">
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
-      <span className="mt-1 flex items-center gap-2">
-        <input inputMode="decimal" value={v[key]} onChange={set(key)} className={inputClass} />
-        <span className="w-7 text-xs font-bold text-slate-400">{unit}</span>
-      </span>
-    </label>
-  );
-
-  return (
-    <div className="space-y-3">
-      {start.notice && <p className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">{start.notice}</p>}
-      <label className="block">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputClass} mt-1`} />
-      </label>
-      <label className="block">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Brand (optional)</span>
-        <input value={brand} onChange={(e) => setBrand(e.target.value)} className={`${inputClass} mt-1`} />
-      </label>
-
-      <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Nutrition per 100 g</p>
-      <div className="grid grid-cols-2 gap-3">
-        {number('Calories', 'kcal', 'kcal')}
-        {number('Protein', 'protein', 'g')}
-        {number('Carbs', 'carbs', 'g')}
-        {number('Fat', 'fat', 'g')}
-        {number('Fiber', 'fiber', 'g')}
-        {number('Sugar', 'sugar', 'g')}
-        {number('Sodium', 'sodium', 'mg')}
-      </div>
-
-      <p className="pt-2 text-[10px] font-black uppercase tracking-widest text-slate-400">One serving (optional)</p>
-      <p className="-mt-2 text-xs font-bold text-slate-400">For things you count: 1 bar, 1 slice, 1 scoop.</p>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Name</span>
-          <input value={v.servingName} onChange={set('servingName')} placeholder="bar, slice, scoop" className={`${inputClass} mt-1`} />
-        </label>
-        {number('Weight', 'serving', 'g')}
-      </div>
-
-      {error && <p className="text-sm font-bold text-red-600">{error}</p>}
-
-      <div className="flex gap-3 pt-2">
-        <button onClick={onCancel} className="flex-1 rounded-2xl border border-slate-200 py-4 text-xs font-black uppercase tracking-widest text-slate-500 active:bg-slate-50">
-          Back
-        </button>
-        <button onClick={save} disabled={saving} className="flex-1 rounded-2xl bg-[#004225] py-4 text-xs font-black uppercase tracking-widest text-white disabled:opacity-50 active:scale-95">
-          {saving ? 'Saving…' : 'Save food'}
-        </button>
       </div>
     </div>
   );

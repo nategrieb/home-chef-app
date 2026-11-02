@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
-import { cleanBarcode } from '../../lib/barcode';
+import { cleanBarcode, isValidGtin } from '../../lib/barcode';
 
 type Props = {
   /** Called once with the digits of the first barcode read (or typed). */
@@ -25,6 +25,7 @@ export default function BarcodeScanner({ onCode, onCancel, busy = false }: Props
   const [status, setStatus] = useState<'starting' | 'scanning' | 'blocked' | 'nocamera'>('starting');
   const [typed, setTyped] = useState('');
   const [typedError, setTypedError] = useState<string | null>(null);
+  const [holding, setHolding] = useState(false);
 
   useEffect(() => {
     onCodeRef.current = onCode;
@@ -37,9 +38,24 @@ export default function BarcodeScanner({ onCode, onCancel, busy = false }: Props
     let cancelled = false;
 
     const video = videoRef.current;
+    // A single frame can misread a barcode into a different, valid-looking number (short 8-digit codes are the
+    // worst for this), so a code only counts after several frames in a row agree on it.
+    let lastCode = '';
+    let streak = 0;
+    let lastAt = 0;
+    const readsNeeded = (code: string) => (code.length <= 8 ? 4 : 2);
+
     const found = (value: string) => {
       const code = cleanBarcode(value);
-      if (!code || doneRef.current) return;
+      if (!code || doneRef.current || !isValidGtin(code)) return;
+      const now = Date.now();
+      streak = code === lastCode && now - lastAt < 1500 ? streak + 1 : 1;
+      lastCode = code;
+      lastAt = now;
+      if (streak < readsNeeded(code)) {
+        setHolding(true);
+        return;
+      }
       doneRef.current = true;
       navigator.vibrate?.(60);
       onCodeRef.current(code);
@@ -121,6 +137,10 @@ export default function BarcodeScanner({ onCode, onCancel, busy = false }: Props
       setTypedError('Barcodes have 8 to 14 digits. Check the number under the bars.');
       return;
     }
+    if (!isValidGtin(code)) {
+      setTypedError('That number doesn’t pass the barcode check, so a digit is probably wrong. Check it against the package.');
+      return;
+    }
     setTypedError(null);
     doneRef.current = true;
     onCode(code);
@@ -148,7 +168,9 @@ export default function BarcodeScanner({ onCode, onCancel, busy = false }: Props
           </div>
         )}
       </div>
-      {status === 'scanning' && !busy && <p className="mt-3 text-center text-sm font-bold text-slate-500">Point the camera at the barcode</p>}
+      {status === 'scanning' && !busy && (
+        <p className="mt-3 text-center text-sm font-bold text-slate-500">{holding ? 'Got a read. Hold steady…' : 'Point the camera at the barcode'}</p>
+      )}
 
       <p className="mt-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Or type the number</p>
       <div className="mt-2 flex gap-2">
