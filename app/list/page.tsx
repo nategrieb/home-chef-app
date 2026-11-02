@@ -84,6 +84,10 @@ export default function ListScreen() {
             )}
           </div>
         )}
+
+        <Link href="/list/grouping" className="mt-8 block py-3 text-center text-[11px] font-black uppercase tracking-widest text-slate-400 active:text-slate-700">
+          Items grouped wrong? Fix grouping
+        </Link>
       </div>
     </main>
   );
