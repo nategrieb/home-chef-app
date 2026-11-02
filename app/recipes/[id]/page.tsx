@@ -11,6 +11,7 @@ import { CUISINE_EMOJI, CUISINE_OPTIONS, type CuisineOption } from '../../../lib
 import AddFoodSheet, { type PickedFood } from '../../../components/log/AddFoodSheet';
 import RecipeNutritionSheet from '../../../components/recipes/RecipeNutritionSheet';
 import { localDateKey, MEALS } from '../../../lib/nutrition';
+import { refreshNutrition } from '../../../lib/recipe-sync';
 import { itemMacros, mealForNow, perServing, type RecipeNutritionRow } from '../../../lib/recipe-nutrition';
 
 const UNIT_OPTIONS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'item', 'pinch', 'clove', 'slice', 'can', 'bunch', 'block', 'head', 'carton', 'bag', 'package', 'container', 'jar'] as const;
@@ -169,6 +170,9 @@ export default function RecipeDetail() {
       await supabase.from('ingredients').insert(ingsWithId);
     }
     
+    // The ingredients are the recipe; keep its saved nutrition in step with them.
+    if (nutrition) await refreshNutrition(supabase, params.id as string, nutrition.servings);
+
     setIsEditing(false);
     // For new recipes, redirect to home page after saving
     if (recipe?.title === 'New Recipe') {
@@ -949,7 +953,15 @@ export default function RecipeDetail() {
           title={title}
           existing={nutrition}
           onClose={() => setShowNutritionSheet(false)}
-          onSaved={setNutrition}
+          onSaved={async (row) => {
+            setNutrition(row);
+            // The sheet wrote its changes back to the ingredients; show them.
+            const { data } = await supabase.from('recipes').select(`*, ingredients (*)`).eq('id', params.id).single();
+            if (data) {
+              setRecipe(data);
+              setIngredients((data.ingredients || []).map((ing: any) => ({ ...ing, unit: normalizeUnit(ing.unit) })));
+            }
+          }}
         />
       )}
       {showLogSheet && recipe && nutrition && (
