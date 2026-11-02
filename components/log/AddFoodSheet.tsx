@@ -11,6 +11,7 @@ import {
   type MealSlot,
 } from '../../lib/nutrition';
 import { MAX_ENTRY_GRAMS, amountText, buildPortions, type PortionOptions } from '../../lib/portions';
+import { useFoodSearch } from '../../lib/useFoodSearch';
 import BarcodeScanner from './BarcodeScanner';
 import FoodForm, { type CustomStart } from './FoodForm';
 import { recipeAsFood, type RecipeNutritionRow } from '../../lib/recipe-nutrition';
@@ -72,9 +73,6 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
   const [customStart, setCustomStart] = useState<CustomStart | null>(null);
   const [editingFood, setEditingFood] = useState<Food | null>(null);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Food[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const [recents, setRecents] = useState<Recent[]>([]);
   const [recipes, setRecipes] = useState<Food[]>([]);
   const [selected, setSelected] = useState<Food | null>(null);
@@ -150,38 +148,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Search as you type (debounced).
-  useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) return;
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const res = await fetch(`/api/foods/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
-        const body = (await res.json()) as { foods?: Food[]; usda?: string; error?: string };
-        setResults(body.foods ?? []);
-        setNotice(
-          body.error ??
-            (body.usda === 'rate_limited'
-              ? 'Food database is busy. Showing saved foods only; try again in a few minutes.'
-              : body.usda === 'cache_failed'
-                ? 'Couldn’t load new foods just now. Try the search again.'
-                : body.usda === 'unavailable'
-                ? 'Food database is unreachable. Showing saved foods only.'
-                : null)
-        );
-      } catch {
-        // Aborted by a newer keystroke, or offline.
-      } finally {
-        if (!controller.signal.aborted) setSearching(false);
-      }
-    }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query]);
+  const { results, searching, notice } = useFoodSearch(query);
 
   /** Open the amount screen for a food, loading the units it can be measured in (eggs, slices, tbsp, grams...). */
   async function choose(food: Food, preset?: Preset) {
