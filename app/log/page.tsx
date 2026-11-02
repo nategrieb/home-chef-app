@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { format } from 'date-fns';
 import { supabase } from '../../lib/supabase';
 import MobileNav from '../../components/MobileNav';
@@ -134,6 +135,9 @@ export default function LogPage() {
           <Macro label="Carbs" value={totals.carbs_g} goal={goals.carbs_g} />
           <Macro label="Fat" value={totals.fat_g} goal={goals.fat_g} />
         </div>
+        <Link href="/nutrition" className="mt-4 block text-center text-[11px] font-black uppercase tracking-widest text-[#004225] active:opacity-60">
+          Vitamins, minerals and more ›
+        </Link>
       </section>
 
       <div className="space-y-5">

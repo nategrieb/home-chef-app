@@ -23,7 +23,7 @@ export default function CaloriesCard({ entries, goals, ready, error, onEditGoals
   return (
     <section className="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
       <div className="flex items-center gap-2">
-        <Link href="/log" className="min-w-0 flex-1" aria-label="Open today's food log">
+        <Link href="/nutrition" className="min-w-0 flex-1" aria-label="Open today's nutrition">
           {error && !ready ? (
             <p className="text-sm font-bold text-slate-400">Calories unavailable right now</p>
           ) : (
@@ -61,7 +61,7 @@ export default function CaloriesCard({ entries, goals, ready, error, onEditGoals
       {goals.kcal ? <Bar value={totals.kcal} goal={goals.kcal} className="mt-2.5 !h-1.5" /> : null}
 
       <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-500">
-        <Link href="/log" className="min-w-0 truncate" tabIndex={-1}>
+        <Link href="/nutrition" className="min-w-0 truncate" tabIndex={-1}>
           {macro('P', totals.protein_g, goals.protein_g)} · {macro('C', totals.carbs_g, goals.carbs_g)} · {macro('F', totals.fat_g, goals.fat_g)} g
         </Link>
         <button onClick={onEditGoals} className="-my-2.5 shrink-0 py-2.5 pl-4 text-[10px] font-black uppercase tracking-widest text-slate-400 underline underline-offset-2 active:text-slate-700">
