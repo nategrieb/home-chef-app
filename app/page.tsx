@@ -26,20 +26,17 @@ export default function Today() {
   if (shopping.loading) return <PageSkeleton title="Today" />;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-white to-slate-100 pb-44 px-4 sm:px-6 pt-8 sm:pt-10">
+    <main className="min-h-screen bg-gradient-to-b from-white via-white to-slate-100 pb-44 px-4 sm:px-6 pt-6 sm:pt-8">
       <div className="mx-auto max-w-2xl">
-        <Header>
+        <Header compact>
           <Link href="/submit-order" className="p-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-800">
             Order
           </Link>
         </Header>
 
-        <div className="mb-5">
-          <h1 className="page-title-brand text-3xl sm:text-4xl">Today</h1>
-          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-500">{format(new Date(), 'EEEE, MMM d')}</p>
-        </div>
+        <p className="mb-2 px-1 text-[11px] font-black uppercase tracking-widest text-slate-400">{format(new Date(), 'EEEE, MMM d')}</p>
 
-        <div className="space-y-5">
+        <div className="space-y-3">
           <CaloriesCard
             entries={today.entries}
             goals={today.goals}

@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { Bar, Macro } from '../log/Bars';
+import { Bar } from '../log/Bars';
 import { sumMacros, type Goals, type LogEntry } from '../../lib/nutrition';
 
 type Props = {
@@ -13,58 +13,59 @@ type Props = {
   onScan: () => void;
 };
 
-/** Today's calories and macros against your goals, with the two ways to log something in one tap. */
+/** Today's calories against your goal on one slim card, with Log and Scan within thumb reach. */
 export default function CaloriesCard({ entries, goals, ready, error, onEditGoals, onLog, onScan }: Props) {
   const totals = sumMacros(entries);
   const kcal = Math.round(totals.kcal);
   const left = goals.kcal ? Math.round(goals.kcal - totals.kcal) : null;
+  const macro = (label: string, value: number, goal: number | null) => `${label} ${Math.round(value)}${goal ? `/${Math.round(goal)}` : ''}`;
 
   return (
-    <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
+    <section className="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-2">
         <Link href="/log" className="min-w-0 flex-1" aria-label="Open today's food log">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Calories today</p>
           {error && !ready ? (
-            <p className="mt-1 text-sm font-bold text-slate-400">Calories unavailable right now</p>
+            <p className="text-sm font-bold text-slate-400">Calories unavailable right now</p>
           ) : (
             <>
-              <p className="mt-1 text-4xl font-black text-slate-900">
-                {ready ? kcal : '—'}
-                {goals.kcal ? <span className="text-base font-bold text-slate-400"> / {Math.round(goals.kcal)} kcal</span> : <span className="text-base font-bold text-slate-400"> kcal</span>}
+              <p className="truncate leading-none">
+                <span className="text-2xl font-black text-slate-900">{ready ? kcal : '—'}</span>
+                <span className="text-sm font-bold text-slate-400"> {goals.kcal ? `/ ${Math.round(goals.kcal)} ` : ''}kcal</span>
               </p>
-              {left != null && ready && (
-                <p className={`text-xs font-black uppercase tracking-widest ${left < 0 ? 'text-amber-600' : 'text-slate-400'}`}>
-                  {left < 0 ? `${Math.abs(left)} over` : `${left} left`}
-                </p>
-              )}
+              <p className={`mt-1 text-[10px] font-black uppercase tracking-widest ${left != null && left < 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                {left == null || !ready ? 'Calories today' : left < 0 ? `${Math.abs(left)} over` : `${left} left`}
+              </p>
             </>
           )}
         </Link>
-        <button onClick={onEditGoals} className="shrink-0 rounded-full bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 active:bg-slate-200">
-          {goals.kcal ? 'Goals' : 'Set goals'}
-        </button>
-      </div>
 
-      {goals.kcal ? <Bar value={totals.kcal} goal={goals.kcal} className="mt-3" /> : null}
-
-      <Link href="/log" className="mt-4 grid grid-cols-3 gap-4" tabIndex={-1} aria-hidden="true">
-        <Macro label="Protein" value={totals.protein_g} goal={goals.protein_g} />
-        <Macro label="Carbs" value={totals.carbs_g} goal={goals.carbs_g} />
-        <Macro label="Fat" value={totals.fat_g} goal={goals.fat_g} />
-      </Link>
-
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <button onClick={onLog} className="rounded-2xl bg-[#004225] py-4 text-xs font-black uppercase tracking-widest text-white active:scale-95">
-          + Log food
+        <button
+          onClick={onLog}
+          aria-label="Log food"
+          className="flex h-10 shrink-0 items-center gap-1 rounded-full bg-[#004225] pl-3 pr-4 text-[11px] font-black uppercase tracking-wider text-white active:scale-95"
+        >
+          <span className="text-base leading-none">+</span> Log
         </button>
         <button
           onClick={onScan}
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-[#004225] py-4 text-xs font-black uppercase tracking-widest text-[#004225] active:scale-95"
+          aria-label="Scan a barcode"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-[#004225] pl-3 pr-4 text-[11px] font-black uppercase tracking-wider text-[#004225] active:scale-95"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 8V6a2 2 0 012-2h2M17 4h2a2 2 0 012 2v2M21 16v2a2 2 0 01-2 2h-2M7 20H5a2 2 0 01-2-2v-2M7 8v8M11 8v8M14 8v8M17 8v8" />
           </svg>
           Scan
+        </button>
+      </div>
+
+      {goals.kcal ? <Bar value={totals.kcal} goal={goals.kcal} className="mt-2.5 !h-1.5" /> : null}
+
+      <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-500">
+        <Link href="/log" className="min-w-0 truncate" tabIndex={-1}>
+          {macro('P', totals.protein_g, goals.protein_g)} · {macro('C', totals.carbs_g, goals.carbs_g)} · {macro('F', totals.fat_g, goals.fat_g)} g
+        </Link>
+        <button onClick={onEditGoals} className="-my-2.5 shrink-0 py-2.5 pl-4 text-[10px] font-black uppercase tracking-widest text-slate-400 underline underline-offset-2 active:text-slate-700">
+          {goals.kcal ? 'Goals' : 'Set goals'}
         </button>
       </div>
     </section>

@@ -4,18 +4,18 @@ import { formatShopQuantity, type AggregatedIngredient } from '../../lib/shoppin
 import type { ManualShoppingItem } from '../../lib/useShoppingList';
 
 /** One ingredient on the list: tap the circle to put it in the cart. */
-export function IngredientRow({ item, checked, onToggle }: { item: AggregatedIngredient; checked: boolean; onToggle: (stateKey: string, next: boolean) => void }) {
+export function IngredientRow({ item, checked, onToggle, compact = false }: { item: AggregatedIngredient; checked: boolean; onToggle: (stateKey: string, next: boolean) => void; compact?: boolean }) {
   const quantity = formatShopQuantity(item.prep_details);
   return (
-    <label className="flex cursor-pointer items-center gap-4 rounded-3xl border border-slate-100 bg-slate-50 p-4 transition-colors active:bg-slate-100">
+    <label className={`flex cursor-pointer items-center border border-slate-100 bg-slate-50 transition-colors active:bg-slate-100 ${compact ? "gap-3 rounded-2xl px-3.5 py-2.5" : "gap-4 rounded-3xl p-4"}`}>
       <input
         type="checkbox"
         checked={checked}
         onChange={() => onToggle(item.state_key, !checked)}
-        className="h-7 w-7 shrink-0 appearance-none rounded-full border-2 border-slate-300 transition-all checked:border-[#004225] checked:bg-[#004225]"
+        className={`shrink-0 appearance-none rounded-full border-2 border-slate-300 transition-all checked:border-[#004225] checked:bg-[#004225] ${compact ? "h-6 w-6" : "h-7 w-7"}`}
       />
       <div className="min-w-0">
-        <span className={`block text-lg font-bold leading-tight ${checked ? 'text-slate-300 line-through' : 'text-slate-900'}`}>
+        <span className={`block font-bold leading-tight ${compact ? 'text-base' : 'text-lg'} ${checked ? 'text-slate-300 line-through' : 'text-slate-900'}`}>
           {item.canonical_name}
           {quantity ? <span className={`ml-2 text-base font-black ${checked ? 'text-slate-300' : 'text-[#004225]'}`}>{quantity}</span> : null}
         </span>
@@ -26,11 +26,11 @@ export function IngredientRow({ item, checked, onToggle }: { item: AggregatedIng
 }
 
 /** One of the things added by hand ("paper towels"). */
-export function ExtraRow({ item, busy, onRemove }: { item: ManualShoppingItem; busy: boolean; onRemove: (id: string) => void }) {
+export function ExtraRow({ item, busy, onRemove, compact = false }: { item: ManualShoppingItem; busy: boolean; onRemove: (id: string) => void; compact?: boolean }) {
   return (
-    <div className={`flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+    <div className={`flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 ${compact ? 'py-1.5' : 'py-3'} ${busy ? 'pointer-events-none opacity-50' : ''}`}>
       <span className="font-semibold capitalize text-slate-900">{item.item_name}</span>
-      <button onClick={() => onRemove(item.id)} className="px-2 py-2 text-xs font-black uppercase tracking-wider text-red-600" aria-label={`Remove ${item.item_name}`}>
+      <button onClick={() => onRemove(item.id)} className="shrink-0 whitespace-nowrap px-2 py-2 text-xs font-black uppercase tracking-wider text-red-600" aria-label={`Remove ${item.item_name}`}>
         Got it
       </button>
     </div>
