@@ -7,6 +7,7 @@ import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
 import PageSkeleton from '../../components/PageSkeleton';
 import { markRecipeIngredientsUnchecked } from '../../lib/shopping';
+import { toast } from '../../lib/toast';
 import { useRecipeNutrition } from '../../lib/useRecipeNutrition';
 import MacroLine from '../../components/recipes/MacroLine';
 
@@ -43,6 +44,7 @@ export default function MealPlan() {
       // Make the recipe's ingredients show up unchecked on the shopping list.
       await markRecipeIngredientsUnchecked(recipeId);
       fetchData();
+      toast(`Added to ${format(weekDays[dayIndex], 'EEEE')}`);
       setSelectedDate('');
       setSelectedRecipe('');
     }

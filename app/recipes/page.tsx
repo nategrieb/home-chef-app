@@ -1,4 +1,5 @@
 "use client";
+import { toast } from '../../lib/toast';
 import { useRecipeNutrition } from '../../lib/useRecipeNutrition';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -122,6 +123,7 @@ export default function Home() {
   const confirmAddToPlan = async () => {
     if (!pendingPlanRecipeId) return;
     await addRecipeToPlan(pendingPlanRecipeId, pendingPlanDayIndex);
+    toast(`Added to ${WEEKDAY_OPTIONS[pendingPlanDayIndex]}`);
     setPendingPlanRecipeId(null);
   };
 
