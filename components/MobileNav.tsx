@@ -7,6 +7,9 @@ import { countToGet, fetchShoppingSnapshot, readShoppingCache, subscribeToShoppi
 export default function MobileNav() {
   const pathname = usePathname();
   const [toGet, setToGet] = useState(0);
+  // The tab you just tapped lights up straight away, before the next page has loaded.
+  const [tapped, setTapped] = useState<string | null>(null);
+  useEffect(() => setTapped(null), [pathname]);
 
   // Badge on "List": instant from the cache, then kept fresh (also live when you or your wife change the list).
   useEffect(() => {
@@ -41,11 +44,12 @@ export default function MobileNav() {
       <footer className="sm:hidden fixed bottom-[max(1rem,calc(env(safe-area-inset-bottom)+0.5rem))] left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200 px-3 py-2 rounded-2xl shadow-xl z-50 whitespace-nowrap">
         <div className="flex gap-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.path;
+            const isActive = (tapped ?? pathname) === item.path;
             return (
               <Link
                 key={item.path}
                 href={item.path}
+                onClick={() => setTapped(item.path)}
                 className={`px-2.5 py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.1em] transition-all active:scale-95 ${
                   isActive
                     ? 'bg-[#004225] text-white shadow-sm'
@@ -63,11 +67,12 @@ export default function MobileNav() {
       <nav className="hidden sm:block fixed bottom-0 inset-x-0 border-t border-slate-200 bg-white/95 backdrop-blur-md z-50">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-center gap-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.path;
+            const isActive = (tapped ?? pathname) === item.path;
             return (
               <Link
                 key={item.path}
                 href={item.path}
+                onClick={() => setTapped(item.path)}
                 className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-[0.14em] transition-colors ${
                   isActive
                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'

@@ -11,6 +11,7 @@ import {
   type MealSlot,
 } from '../../lib/nutrition';
 import { MAX_ENTRY_GRAMS, amountText, buildPortions, type PortionOptions } from '../../lib/portions';
+import { toast } from '../../lib/toast';
 import { useFoodSearch } from '../../lib/useFoodSearch';
 import BarcodeScanner from './BarcodeScanner';
 import FoodForm, { type CustomStart } from './FoodForm';
@@ -289,6 +290,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
       return;
     }
     onAdded(data as LogEntry);
+    toast(`Added to ${MEALS.find((m) => m.key === mealChoice)?.label ?? 'your log'}`);
     onClose();
   }
 
