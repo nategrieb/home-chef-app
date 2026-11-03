@@ -1,6 +1,7 @@
 /** USDA FoodData Central: search and mapping into chef.foods rows (all nutrients per 100 g). */
 
-import { USDA_NUTRIENT, foodSearchScore } from './nutrition';
+import { USDA_NUTRIENT } from './nutrition';
+import { filterAndRank } from './food-match';
 import type { UsdaPortion } from './portions';
 
 const USDA_SEARCH = 'https://api.nal.usda.gov/fdc/v1/foods/search';
@@ -94,15 +95,11 @@ export async function usdaSearch(query: string, dataType: string, pageSize: numb
  * every search word and order them with the same relevance score the search route uses.
  */
 export function rankByQuery(foods: UsdaFood[], query: string): UsdaFood[] {
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const lower = (f: UsdaFood) => f.description.toLowerCase();
-  const matching = foods.filter((f) => terms.every((t) => lower(f).includes(t)));
-  const pool = matching.length > 0 ? matching : foods;
-  return [...pool].sort(
-    (a, b) =>
-      foodSearchScore(b.description, null, query) - foodSearchScore(a.description, null, query) ||
-      a.description.length - b.description.length
-  );
+  // Only foods that match every word (the last one may be unfinished); no fallback to loose matches.
+  return filterAndRank(
+    foods.map((f) => ({ f, name: f.description, brand: (f.brandName ?? f.brandOwner ?? null) as string | null })),
+    query
+  ).map((entry) => entry.f);
 }
 
 /** Household measures for one USDA food (1 large = 50 g, 1 tbsp = 13.5 g, ...). Cached for a month; they never change. */

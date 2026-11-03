@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useFoodSearch } from '../../lib/useFoodSearch';
 import type { Food } from '../../lib/nutrition';
 
 type Props = {
@@ -11,30 +12,7 @@ type Props = {
 /** A small search sheet that returns one food (no amount screen). Used to swap or add foods in a recipe. */
 export default function FoodPicker({ title = 'Choose a food', onPick, onClose }: Props) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Food[]>([]);
-  const [searching, setSearching] = useState(false);
-
-  useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) return;
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const res = await fetch(`/api/foods/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
-        const body = (await res.json()) as { foods?: Food[] };
-        setResults(body.foods ?? []);
-      } catch {
-        // Aborted by a newer keystroke, or offline.
-      } finally {
-        if (!controller.signal.aborted) setSearching(false);
-      }
-    }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query]);
+  const { results, searching } = useFoodSearch(query);
 
   const show = query.trim().length >= 2;
 
