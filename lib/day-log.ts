@@ -46,3 +46,15 @@ export function nextMeal(entries: LogEntry[]): MealSlot {
   if (entries.length === 0) return 'breakfast';
   return [...entries].sort((a, b) => a.created_at.localeCompare(b.created_at))[entries.length - 1].meal;
 }
+
+/** The saved totals for a logged entry after changing its amount: scaled, so foods, custom foods and recipes all edit the same way. */
+export function scaledAmount(entry: LogEntry, amount: { grams: number; quantity: number | null; portion_label: string | null }) {
+  const f = amount.grams / entry.grams;
+  return {
+    ...amount,
+    kcal: Math.round(entry.kcal * f * 10) / 10,
+    protein_g: Math.round(entry.protein_g * f * 10) / 10,
+    carbs_g: Math.round(entry.carbs_g * f * 10) / 10,
+    fat_g: Math.round(entry.fat_g * f * 10) / 10,
+  };
+}
