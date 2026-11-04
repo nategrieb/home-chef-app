@@ -10,7 +10,7 @@ type Props = {
   onAdd: (meal: MealSlot) => void;
 };
 
-/** Today's meals, right under the calories: each meal is one row that opens to show what was logged. */
+/** Today's meals, shown inside the calories card: each meal is one row that opens to show what was logged. */
 export default function MealsCard({ entries, ready, onEdit, onAdd }: Props) {
   const [open, setOpen] = useState<Set<MealSlot>>(new Set());
   if (!ready) return null;
@@ -24,7 +24,7 @@ export default function MealsCard({ entries, ready, onEdit, onAdd }: Props) {
     });
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+    <div>
       <ul className="divide-y divide-slate-50">
         {MEALS.map((meal) => {
           const mealEntries = entries.filter((e) => e.meal === meal.key);
@@ -52,9 +52,11 @@ export default function MealsCard({ entries, ready, onEdit, onAdd }: Props) {
                 <button
                   onClick={() => onAdd(meal.key)}
                   aria-label={`Add food to ${meal.label}`}
-                  className="mr-2 h-10 w-10 shrink-0 rounded-xl text-xl font-black text-slate-400 active:bg-slate-100 active:text-[#004225]"
+                  className={`mr-2 shrink-0 rounded-xl font-black active:bg-slate-100 active:text-[#004225] ${
+                    mealEntries.length === 0 ? 'h-10 px-3 text-[10px] uppercase tracking-widest text-[#004225]' : 'h-10 w-10 text-xl text-slate-400'
+                  }`}
                 >
-                  +
+                  {mealEntries.length === 0 ? '+ Add' : '+'}
                 </button>
               </div>
 
@@ -79,6 +81,6 @@ export default function MealsCard({ entries, ready, onEdit, onAdd }: Props) {
           );
         })}
       </ul>
-    </section>
+    </div>
   );
 }

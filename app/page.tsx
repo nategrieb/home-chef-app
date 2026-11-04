@@ -47,17 +47,9 @@ export default function Today() {
         <p className="mb-2 px-1 text-[11px] font-black uppercase tracking-widest text-slate-400">{format(new Date(), 'EEEE, MMM d')}</p>
 
         <div className="space-y-3">
-          <CaloriesCard
-            entries={today.entries}
-            goals={today.goals}
-            ready={today.ready}
-            error={today.logError}
-            onEditGoals={() => setSheet({ kind: 'goals' })}
-            onLog={() => setSheet({ kind: 'log' })}
-            onScan={() => setSheet({ kind: 'scan' })}
-          />
-
-          <MealsCard entries={today.entries} ready={today.ready} onEdit={setEditing} onAdd={(meal) => setSheet({ kind: 'log', meal })} />
+          <CaloriesCard entries={today.entries} goals={today.goals} ready={today.ready} error={today.logError} onEditGoals={() => setSheet({ kind: 'goals' })}>
+            <MealsCard entries={today.entries} ready={today.ready} onEdit={setEditing} onAdd={(meal) => setSheet({ kind: 'log', meal })} />
+          </CaloriesCard>
 
           <ListCard shopping={shopping} />
 
