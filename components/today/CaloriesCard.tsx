@@ -1,5 +1,6 @@
 "use client";
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { Bar } from '../log/Bars';
 import { sumMacros, type Goals, type LogEntry } from '../../lib/nutrition';
 
@@ -9,19 +10,20 @@ type Props = {
   ready: boolean;
   error: string | null;
   onEditGoals: () => void;
-  onLog: () => void;
-  onScan: () => void;
+  /** The day's meals, shown inside this card under the numbers. */
+  children?: ReactNode;
 };
 
-/** Today's calories against your goal on one slim card, with Log and Scan within thumb reach. */
-export default function CaloriesCard({ entries, goals, ready, error, onEditGoals, onLog, onScan }: Props) {
+/** Today's calories and macros against your goals, with the day's meals directly underneath in the same card. */
+export default function CaloriesCard({ entries, goals, ready, error, onEditGoals, children }: Props) {
   const totals = sumMacros(entries);
   const kcal = Math.round(totals.kcal);
   const left = goals.kcal ? Math.round(goals.kcal - totals.kcal) : null;
   const macro = (label: string, value: number, goal: number | null) => `${label} ${Math.round(value)}${goal ? `/${Math.round(goal)}` : ''}`;
 
   return (
-    <section className="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+      <div className="px-4 pt-3 pb-3">
       <div className="flex items-center gap-2">
         <Link href="/nutrition" className="min-w-0 flex-1" aria-label="Open today's nutrition">
           {error && !ready ? (
@@ -39,23 +41,6 @@ export default function CaloriesCard({ entries, goals, ready, error, onEditGoals
           )}
         </Link>
 
-        <button
-          onClick={onLog}
-          aria-label="Log food"
-          className="flex h-10 shrink-0 items-center gap-1 rounded-full bg-[#004225] pl-3 pr-4 text-[11px] font-black uppercase tracking-wider text-white active:scale-95"
-        >
-          <span className="text-base leading-none">+</span> Log
-        </button>
-        <button
-          onClick={onScan}
-          aria-label="Scan a barcode"
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-[#004225] pl-3 pr-4 text-[11px] font-black uppercase tracking-wider text-[#004225] active:scale-95"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8V6a2 2 0 012-2h2M17 4h2a2 2 0 012 2v2M21 16v2a2 2 0 01-2 2h-2M7 20H5a2 2 0 01-2-2v-2M7 8v8M11 8v8M14 8v8M17 8v8" />
-          </svg>
-          Scan
-        </button>
       </div>
 
       {goals.kcal ? <Bar value={totals.kcal} goal={goals.kcal} className="mt-2.5 !h-1.5" /> : null}
@@ -68,6 +53,8 @@ export default function CaloriesCard({ entries, goals, ready, error, onEditGoals
           {goals.kcal ? 'Goals' : 'Set goals'}
         </button>
       </div>
+      </div>
+      {children && <div className="border-t border-slate-100">{children}</div>}
     </section>
   );
 }
