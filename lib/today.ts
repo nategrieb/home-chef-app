@@ -92,6 +92,10 @@ export function useToday() {
     order: data?.order ?? null,
     addEntry: (entry: LogEntry) =>
       setData((prev) => (prev ? { ...prev, entries: [...prev.entries, toEntry(entry as unknown as Record<string, unknown>)] } : prev)),
+    /** Change an entry's amount (already saved) or drop a deleted one, without reloading the day. */
+    updateEntry: (id: string, patch: Partial<LogEntry>) =>
+      setData((prev) => (prev ? { ...prev, entries: prev.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) } : prev)),
+    removeEntry: (id: string) => setData((prev) => (prev ? { ...prev, entries: prev.entries.filter((e) => e.id !== id) } : prev)),
     setGoals: (goals: Goals) => setData((prev) => (prev ? { ...prev, goals } : prev)),
     refresh,
   };
