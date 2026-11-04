@@ -7,6 +7,9 @@ import MobileNav from '../../components/MobileNav';
 import Header from '../../components/Header';
 import AddFoodSheet from '../../components/log/AddFoodSheet';
 import GoalsSheet from '../../components/log/GoalsSheet';
+import SaveRecipeSheet from '../../components/log/SaveRecipeSheet';
+import { copyEntriesToDay } from '../../lib/relog';
+import { toast } from '../../lib/toast';
 import { Bar, Macro } from '../../components/log/Bars';
 import { NO_GOALS, fetchDay, toEntry, type DayResult } from '../../lib/day-log';
 import { MAX_ENTRY_GRAMS, amountText } from '../../lib/portions';
@@ -38,6 +41,11 @@ export default function LogPage() {
   const [addMeal, setAddMeal] = useState<MealSlot | null>(null);
   const [showGoals, setShowGoals] = useState(false);
   const [editing, setEditing] = useState<LogEntry | null>(null);
+  // From an earlier day: log this food again (today, in whichever meal you choose).
+  const [relog, setRelog] = useState<LogEntry | null>(null);
+  const [savingMeal, setSavingMeal] = useState<MealSlot | null>(null);
+  const [copying, setCopying] = useState<MealSlot | null>(null);
+  const isPast = date < today;
 
   const applyDay = useCallback((result: DayResult) => {
     setEntries(result.entries);
@@ -81,6 +89,13 @@ export default function LogPage() {
     setEditing(null);
     const { error } = await supabase.from('food_log').update(next).eq('id', entry.id);
     if (error) reload();
+  }
+
+  async function copyMeal(meal: MealSlot, mealEntries: LogEntry[]) {
+    setCopying(meal);
+    const { error } = await copyEntriesToDay(mealEntries, today);
+    setCopying(null);
+    toast(error ? 'Couldn’t copy that meal' : `Copied ${mealEntries.length} item${mealEntries.length === 1 ? '' : 's'} to today’s ${MEALS.find((m) => m.key === meal)?.label}`);
   }
 
   return (
@@ -153,18 +168,48 @@ export default function LogPage() {
               <ul className="divide-y divide-slate-50">
                 {mealEntries.map((entry) => (
                   <li key={entry.id}>
-                    <button onClick={() => setEditing(entry)} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left active:bg-slate-50">
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-bold text-slate-900">{entry.name}</span>
-                        <span className="block text-xs font-bold text-slate-400">
-                          {amountText(entry)} · {Math.round(entry.protein_g)}P {Math.round(entry.carbs_g)}C {Math.round(entry.fat_g)}F
+                    <div className="flex items-center gap-2 pr-3">
+                      <button onClick={() => setEditing(entry)} className="flex min-w-0 flex-1 items-center justify-between gap-3 py-4 pl-5 text-left active:bg-slate-50">
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-bold text-slate-900">{entry.name}</span>
+                          <span className="block text-xs font-bold text-slate-400">
+                            {amountText(entry)} · {Math.round(entry.protein_g)}P {Math.round(entry.carbs_g)}C {Math.round(entry.fat_g)}F
+                          </span>
                         </span>
-                      </span>
-                      <span className="shrink-0 text-sm font-black text-slate-700">{Math.round(entry.kcal)}</span>
-                    </button>
+                        <span className="shrink-0 text-sm font-black text-slate-700">{Math.round(entry.kcal)}</span>
+                      </button>
+                      {isPast && (
+                        <button
+                          onClick={() => setRelog(entry)}
+                          aria-label={`Log ${entry.name} again`}
+                          className="shrink-0 rounded-xl bg-[#004225] px-3.5 py-2.5 text-[10px] font-black uppercase tracking-widest text-white active:scale-95"
+                        >
+                          Log
+                        </button>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
+              {mealEntries.length > 0 && (
+                <div className="flex gap-2 border-t border-slate-50 px-3 pt-3">
+                  {isPast && (
+                    <button
+                      onClick={() => copyMeal(meal.key, mealEntries)}
+                      disabled={copying === meal.key}
+                      className="flex-1 rounded-xl bg-slate-100 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 disabled:opacity-50 active:bg-slate-200"
+                    >
+                      {copying === meal.key ? 'Copying…' : 'Copy to today'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setSavingMeal(meal.key)}
+                    className="flex-1 rounded-xl bg-slate-100 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 active:bg-slate-200"
+                  >
+                    Save as recipe
+                  </button>
+                </div>
+              )}
               <div className="p-3">
                 <button
                   onClick={() => setAddMeal(meal.key)}
@@ -186,6 +231,15 @@ export default function LogPage() {
           date={date}
           onClose={() => setAddMeal(null)}
           onAdded={(entry) => setEntries((prev) => [...prev, toEntry(entry as unknown as Record<string, unknown>)])}
+        />
+      )}
+      {relog && <AddFoodSheet meal={relog.meal} date={today} initialEntry={relog} onClose={() => setRelog(null)} onAdded={() => {}} />}
+      {savingMeal && (
+        <SaveRecipeSheet
+          entries={entries.filter((e) => e.meal === savingMeal)}
+          meal={savingMeal}
+          dateLabel={(() => { const [y, m, d] = date.split('-').map(Number); return format(new Date(y, m - 1, d), 'MMM d'); })()}
+          onClose={() => setSavingMeal(null)}
         />
       )}
       {showGoals && <GoalsSheet goals={goals} onClose={() => setShowGoals(false)} onSaved={setGoals} />}

@@ -32,6 +32,8 @@ type Props = {
   initialRecipeId?: string;
   /** Open straight on the barcode scanner (the Scan button on Today). */
   startWith?: 'scan';
+  /** Log something you already logged (from an earlier day): opens on its amount screen, at the same amount. */
+  initialEntry?: LogEntry;
 };
 
 type Preset = { grams: number; quantity: number | null; portionLabel: string | null };
@@ -68,8 +70,8 @@ function useVisualViewport() {
 
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
-export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onType, initialRecipeId, startWith }: Props) {
-  const [view, setView] = useState<'search' | 'amount' | 'custom' | 'scan'>(initialRecipeId ? 'amount' : startWith === 'scan' ? 'scan' : 'search');
+export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onType, initialRecipeId, initialEntry, startWith }: Props) {
+  const [view, setView] = useState<'search' | 'amount' | 'custom' | 'scan'>(initialRecipeId || initialEntry ? 'amount' : startWith === 'scan' ? 'scan' : 'search');
   const [lookingUp, setLookingUp] = useState(false);
   const [customStart, setCustomStart] = useState<CustomStart | null>(null);
   const [editingFood, setEditingFood] = useState<Food | null>(null);
@@ -84,6 +86,8 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mealChoice, setMealChoice] = useState<MealSlot>(meal);
+  // The empty search screen lists what you logged recently; recipes are one tap away.
+  const [listTab, setListTab] = useState<'recent' | 'recipes'>('recent');
   const viewport = useVisualViewport();
 
   // Recipes with nutrition, and recent foods and recipes: one tap to log them again, at the amount you last used.
@@ -116,7 +120,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
         .from('food_log')
         .select(`grams, quantity, portion_label, recipe_id, created_at, food:foods (${FOOD_COLUMNS})`)
         .order('created_at', { ascending: false })
-        .limit(80);
+        .limit(300);
       if (cancelled) return;
 
       const seen = new Set<string>();
@@ -133,7 +137,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
             portionLabel: row.portion_label,
           },
         });
-        if (list.length >= 10) break;
+        if (list.length >= 30) break;
       }
       setRecipes(recipeFoods);
       setRecents(list);
@@ -141,6 +145,18 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
       const start = initialRecipeId ? recipeById.get(initialRecipeId) : undefined;
       if (start) choose(start);
       else if (initialRecipeId) setView('search');
+
+      if (initialEntry) {
+        const preset: Preset = { grams: initialEntry.grams, quantity: initialEntry.quantity, portionLabel: initialEntry.portion_label };
+        let food: Food | undefined = initialEntry.recipe_id ? recipeById.get(initialEntry.recipe_id) : undefined;
+        if (!food && initialEntry.food_id) {
+          const { data: row } = await supabase.from('foods').select(FOOD_COLUMNS).eq('id', initialEntry.food_id).maybeSingle();
+          food = (row as Food | null) ?? undefined;
+        }
+        if (cancelled) return;
+        if (food) choose(food, preset);
+        else setView('search'); // that food has been deleted: search for it again
+      }
     })();
     return () => {
       cancelled = true;
@@ -391,37 +407,54 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-3" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
           {view === 'search' && (
             <>
-              {!showResults && recipes.length > 0 && (
-                <div className="mb-5">
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Your recipes</p>
-                  <ul className="space-y-2">{recipes.map(recipeRow)}</ul>
+              {!showResults && !onPick && (recents.length > 0 || recipes.length > 0) && (
+                <div className="mb-3 flex gap-2">
+                  {([
+                    ['recent', 'Recent'],
+                    ['recipes', 'Recipes'],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setListTab(key)}
+                      aria-pressed={listTab === key}
+                      className={`rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-widest ${listTab === key ? 'bg-[#004225] text-white' : 'bg-slate-100 text-slate-500'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               )}
 
-              {!showResults && recents.some((r) => r.food.source !== 'recipe') && (
-                <div>
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Recent</p>
-                  <ul className="space-y-2">
-                    {recents.filter((r) => r.food.source !== 'recipe').map(({ food, last }) => (
-                      <li key={food.id} className="flex items-center gap-2">
-                        <button onClick={() => choose(food, last)} className="min-w-0 flex-1 rounded-2xl bg-slate-50 px-4 py-3 text-left active:bg-slate-100">
-                          <p className="truncate text-sm font-bold text-slate-900">{foodLabel(food)}</p>
-                          <p className="text-xs font-bold text-slate-400">
-                            {amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} · {Math.round(macrosForGrams(food, last.grams).kcal)} kcal
-                          </p>
-                        </button>
-                        <button
-                          onClick={() => addEntry(food, last)}
-                          disabled={saving}
-                          aria-label={`Add ${amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} of ${food.name} again`}
-                          className="h-12 w-12 shrink-0 rounded-2xl bg-[#004225] text-xl font-black text-white disabled:opacity-50 active:scale-95"
-                        >
-                          +
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {!showResults && !onPick && listTab === 'recipes' && (
+                <ul className="space-y-2">{recipes.length > 0 ? recipes.map(recipeRow) : <li className="py-4 text-center text-sm font-bold text-slate-400">No recipes with nutrition yet.</li>}</ul>
+              )}
+
+              {!showResults && !onPick && listTab === 'recent' && recents.length > 0 && (
+                <ul className="space-y-2">
+                  {recents.map(({ food, last }) => (
+                    <li key={food.id} className="flex items-center gap-2">
+                      <button onClick={() => choose(food, last)} className={`min-w-0 flex-1 rounded-2xl px-4 py-3 text-left ${food.source === 'recipe' ? 'bg-emerald-50 active:bg-emerald-100' : 'bg-slate-50 active:bg-slate-100'}`}>
+                        <p className="truncate text-sm font-bold text-slate-900">{foodLabel(food)}</p>
+                        <p className={`text-xs font-bold ${food.source === 'recipe' ? 'text-emerald-800' : 'text-slate-400'}`}>
+                          {food.source === 'recipe' ? 'Recipe · ' : ''}
+                          {amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} · {Math.round(macrosForGrams(food, last.grams).kcal)} kcal
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => addEntry(food, last)}
+                        disabled={saving}
+                        aria-label={`Add ${amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} of ${food.name} again`}
+                        className="h-12 w-12 shrink-0 rounded-2xl bg-[#004225] text-xl font-black text-white disabled:opacity-50 active:scale-95"
+                      >
+                        +
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {!showResults && !onPick && listTab === 'recent' && recents.length === 0 && (
+                <p className="py-4 text-center text-sm font-bold text-slate-400">What you log shows up here, so you can add it again in one tap.</p>
               )}
 
               {showResults && (
