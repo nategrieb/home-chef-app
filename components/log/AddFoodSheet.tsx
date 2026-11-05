@@ -13,6 +13,7 @@ import {
 import { MAX_ENTRY_GRAMS, amountText, buildPortions, type PortionOptions } from '../../lib/portions';
 import { toast } from '../../lib/toast';
 import { useFoodSearch } from '../../lib/useFoodSearch';
+import { matchScore } from '../../lib/food-match';
 import BarcodeScanner from './BarcodeScanner';
 import FoodForm, { type CustomStart } from './FoodForm';
 import { recipeAsFood, type RecipeNutritionRow } from '../../lib/recipe-nutrition';
@@ -28,6 +29,8 @@ type Props = {
   onPick?: (pick: PickedFood) => void;
   /** Pick mode: lets the person skip the database and type the ingredient as text instead. */
   onType?: () => void;
+  /** Stack above another sheet (the nutrition editor sits at 100). */
+  zIndex?: number;
   /** Open straight on this recipe's amount screen (the Log button on a recipe page). */
   initialRecipeId?: string;
   /** Open straight on the barcode scanner (the Scan button on Today). */
@@ -70,7 +73,7 @@ function useVisualViewport() {
 
 const foodLabel = (food: Pick<Food, 'name' | 'brand'>) => (food.brand ? `${food.name} · ${food.brand}` : food.name);
 
-export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onType, initialRecipeId, initialEntry, startWith }: Props) {
+export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onType, zIndex, initialRecipeId, initialEntry, startWith }: Props) {
   const [view, setView] = useState<'search' | 'amount' | 'custom' | 'scan'>(initialRecipeId || initialEntry ? 'amount' : startWith === 'scan' ? 'scan' : 'search');
   const [lookingUp, setLookingUp] = useState(false);
   const [customStart, setCustomStart] = useState<CustomStart | null>(null);
@@ -137,7 +140,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
             portionLabel: row.portion_label,
           },
         });
-        if (list.length >= 30) break;
+        if (list.length >= 100) break;
       }
       setRecipes(recipeFoods);
       setRecents(list);
@@ -341,8 +344,34 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
     </li>
   );
 
+  const recentRow = ({ food, last }: Recent) => (
+    <li key={`recent-${food.id}`} className="flex items-center gap-2">
+      <button onClick={() => choose(food, last)} className={`min-w-0 flex-1 rounded-2xl px-4 py-3 text-left ${food.source === 'recipe' ? 'bg-emerald-50 active:bg-emerald-100' : 'bg-slate-50 active:bg-slate-100'}`}>
+        <p className="truncate text-sm font-bold text-slate-900">{foodLabel(food)}</p>
+        <p className={`text-xs font-bold ${food.source === 'recipe' ? 'text-emerald-800' : 'text-slate-400'}`}>
+          {food.source === 'recipe' ? 'Recipe · ' : ''}
+          {amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} · {Math.round(macrosForGrams(food, last.grams).kcal)} kcal
+        </p>
+      </button>
+      <button
+        onClick={() => addEntry(food, last)}
+        disabled={saving}
+        aria-label={`Add ${amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} of ${food.name} again`}
+        className="h-12 w-12 shrink-0 rounded-2xl bg-[#004225] text-xl font-black text-white disabled:opacity-50 active:scale-95"
+      >
+        +
+      </button>
+    </li>
+  );
+
+  // What you've logged before, that matches what you've typed, comes first: type "gree" and yesterday's Greek yogurt leads.
+  const matchingRecents = showResults ? recents.filter((r) => matchScore(r.food, query) !== null) : [];
+  const recentIds = new Set(matchingRecents.map((r) => r.food.id));
+  const otherRecipes = matchingRecipes.filter((r) => !recentIds.has(r.id));
+  const otherResults = results.filter((f) => !recentIds.has(f.id));
+
   return (
-    <div className="fixed inset-0 z-[90] flex items-start justify-center bg-slate-950/70 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[90] flex items-start justify-center bg-slate-950/70 backdrop-blur-sm" style={zIndex ? { zIndex } : undefined} onClick={onClose}>
       {/* Pinned to the top at a fixed height: results scroll underneath the search box instead of the sheet growing. */}
       <div
         className="flex w-full max-w-md flex-col rounded-3xl bg-white shadow-2xl"
@@ -431,25 +460,7 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
 
               {!showResults && !onPick && listTab === 'recent' && recents.length > 0 && (
                 <ul className="space-y-2">
-                  {recents.map(({ food, last }) => (
-                    <li key={food.id} className="flex items-center gap-2">
-                      <button onClick={() => choose(food, last)} className={`min-w-0 flex-1 rounded-2xl px-4 py-3 text-left ${food.source === 'recipe' ? 'bg-emerald-50 active:bg-emerald-100' : 'bg-slate-50 active:bg-slate-100'}`}>
-                        <p className="truncate text-sm font-bold text-slate-900">{foodLabel(food)}</p>
-                        <p className={`text-xs font-bold ${food.source === 'recipe' ? 'text-emerald-800' : 'text-slate-400'}`}>
-                          {food.source === 'recipe' ? 'Recipe · ' : ''}
-                          {amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} · {Math.round(macrosForGrams(food, last.grams).kcal)} kcal
-                        </p>
-                      </button>
-                      <button
-                        onClick={() => addEntry(food, last)}
-                        disabled={saving}
-                        aria-label={`Add ${amountText({ grams: last.grams, quantity: last.quantity, portion_label: last.portionLabel })} of ${food.name} again`}
-                        className="h-12 w-12 shrink-0 rounded-2xl bg-[#004225] text-xl font-black text-white disabled:opacity-50 active:scale-95"
-                      >
-                        +
-                      </button>
-                    </li>
-                  ))}
+                  {recents.slice(0, 30).map(recentRow)}
                 </ul>
               )}
 
@@ -459,8 +470,9 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
 
               {showResults && (
                 <ul className="space-y-2">
-                  {matchingRecipes.map(recipeRow)}
-                  {results.map((food) => (
+                  {matchingRecents.map(recentRow)}
+                  {otherRecipes.map(recipeRow)}
+                  {otherResults.map((food) => (
                     <li key={food.id}>
                       <button onClick={() => choose(food)} className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-left active:bg-slate-100">
                         <p className="truncate text-sm font-bold text-slate-900">{foodLabel(food)}</p>
@@ -471,8 +483,8 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
                       </button>
                     </li>
                   ))}
-                  {searching && results.length === 0 && matchingRecipes.length === 0 && <li className="py-4 text-center text-sm font-bold text-slate-400">Searching…</li>}
-                  {!searching && results.length === 0 && matchingRecipes.length === 0 && <li className="py-4 text-center text-sm font-bold text-slate-400">No matches yet.</li>}
+                  {searching && otherResults.length === 0 && otherRecipes.length === 0 && matchingRecents.length === 0 && <li className="py-4 text-center text-sm font-bold text-slate-400">Searching…</li>}
+                  {!searching && otherResults.length === 0 && otherRecipes.length === 0 && matchingRecents.length === 0 && <li className="py-4 text-center text-sm font-bold text-slate-400">No matches yet.</li>}
                 </ul>
               )}
 

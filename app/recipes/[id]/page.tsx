@@ -24,7 +24,7 @@ export default function RecipeDetail() {
   const [recipe, setRecipe] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [pickingIngredient, setPickingIngredient] = useState(false);
+  const [pickingIngredient, setPickingIngredient] = useState<false | 'search' | 'scan'>(false);
   const [saving, setSaving] = useState(false);
   // The details (description, links, category, tags) stay folded while editing, except on a brand-new recipe.
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -869,10 +869,22 @@ export default function RecipeDetail() {
               </div>
             ))}
             {isEditing && (
-              <button onClick={() => setPickingIngredient(true)} className="quiet-action w-full p-4 text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
-                + Add Ingredient
-                <span aria-hidden="true" className="quiet-action-line" />
-              </button>
+              <div className="flex gap-2">
+                <button onClick={() => setPickingIngredient('search')} className="quiet-action min-w-0 flex-1 p-4 text-sm font-black border-2 border-dashed border-transparent hover:border-slate-300">
+                  + Add Ingredient
+                  <span aria-hidden="true" className="quiet-action-line" />
+                </button>
+                <button
+                  onClick={() => setPickingIngredient('scan')}
+                  aria-label="Scan an ingredient"
+                  title="Scan an ingredient"
+                  className="flex w-14 shrink-0 items-center justify-center border-2 border-[#004225] text-[#004225] active:scale-95"
+                >
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8V6a2 2 0 012-2h2M17 4h2a2 2 0 012 2v2M21 16v2a2 2 0 01-2 2h-2M7 20H5a2 2 0 01-2-2v-2M7 8v8M11 8v8M14 8v8M17 8v8" />
+                  </svg>
+                </button>
+              </div>
             )}
           </div>
         </section>
@@ -985,6 +997,7 @@ export default function RecipeDetail() {
         <AddFoodSheet
           meal="lunch"
           date={localDateKey()}
+          startWith={pickingIngredient === 'scan' ? 'scan' : undefined}
           onClose={() => setPickingIngredient(false)}
           onAdded={() => {}}
           onPick={addPickedIngredient}

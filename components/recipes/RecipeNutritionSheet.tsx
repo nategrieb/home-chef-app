@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase';
 import { parseNumber, type Food } from '../../lib/nutrition';
 import { MAX_ENTRY_GRAMS } from '../../lib/portions';
 import { itemMacros, totalsOf, type RecipeItem, type RecipeNutritionRow } from '../../lib/recipe-nutrition';
-import FoodPicker from './FoodPicker';
+import AddFoodSheet from '../log/AddFoodSheet';
+import { localDateKey } from '../../lib/nutrition';
 import { writeBackToIngredients, type ItemChange } from '../../lib/recipe-sync';
 
 type Props = {
@@ -73,15 +74,16 @@ export default function RecipeNutritionSheet({ recipeId, title, existing, onClos
   const skipped = live.length - counted.length;
   const tooMuch = totals.grams > MAX_ENTRY_GRAMS;
 
-  function pickFood(food: Food) {
+  function pickFood(food: Food, pickedGrams: number) {
     if (!picker || !items) return;
     if (picker.index === 'new') {
-      setItems([...items, itemFromFood(food, 100)]);
+      setItems([...items, itemFromFood(food, pickedGrams)]);
       setOrigins([...origins, null]);
-      setGramsText([...gramsText, '100']);
+      setGramsText([...gramsText, String(pickedGrams)]);
     } else {
       const old = items[picker.index];
-      setItems(items.map((item, i) => (i === picker.index ? itemFromFood(food, parseNumber(gramsText[i] ?? '') ?? 0, old.line) : item)));
+      setItems(items.map((item, i) => (i === picker.index ? itemFromFood(food, pickedGrams, old.line) : item)));
+      setGramsText(gramsText.map((g, i) => (i === picker.index ? String(pickedGrams) : g)));
     }
     setPicker(null);
   }
@@ -248,7 +250,16 @@ export default function RecipeNutritionSheet({ recipeId, title, existing, onClos
         </div>
       </div>
 
-      {picker && <FoodPicker title={picker.index === 'new' ? 'Add a food' : 'Change food'} onPick={pickFood} onClose={() => setPicker(null)} />}
+      {picker && (
+        <AddFoodSheet
+          meal="lunch"
+          date={localDateKey()}
+          zIndex={110}
+          onClose={() => setPicker(null)}
+          onAdded={() => {}}
+          onPick={({ food, grams }) => pickFood(food, grams)}
+        />
+      )}
     </div>
   );
 }
