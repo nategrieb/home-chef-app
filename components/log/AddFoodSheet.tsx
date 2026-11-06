@@ -142,7 +142,14 @@ export default function AddFoodSheet({ meal, date, onClose, onAdded, onPick, onT
         });
         if (list.length >= 100) break;
       }
-      setRecipes(recipeFoods);
+      // Recipes you've logged come first, most recent first (leftovers!); the rest follow alphabetically.
+      const lastLogged = new Map<string, number>();
+      for (const row of (data ?? []) as unknown as { recipe_id: string | null }[]) {
+        if (row.recipe_id && !lastLogged.has(row.recipe_id)) lastLogged.set(row.recipe_id, lastLogged.size);
+      }
+      setRecipes(
+        [...recipeFoods].sort((x, y) => (lastLogged.get(x.id) ?? Infinity) - (lastLogged.get(y.id) ?? Infinity) || x.name.localeCompare(y.name))
+      );
       setRecents(list);
 
       const start = initialRecipeId ? recipeById.get(initialRecipeId) : undefined;
